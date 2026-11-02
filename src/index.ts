@@ -9,3 +9,4 @@ export { WorkforceService, type BusinessProfile, type Employee, type TaskResult 
 export { TEMPLATES, getTemplate, type EmployeeTemplate } from "./modules/workforce/templates.js";
 export { GENERIC_PACK, registerPack, packFor, describePack, type RulesPack } from "./modules/workforce/finance/rules-pack.js";
 export { Ledger, LedgerError, DEFAULT_CHART, type Account, type AccountType, type JournalEntry, type JournalLine } from "./modules/ledger/index.js";
+export { EnergyMeter, PLANS, DEFAULT_PRICES, costMicro, type EnergyPlan, type Verdict, type UsageRecord } from "./modules/energy/index.js";
