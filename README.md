@@ -14,3 +14,16 @@ npm run check   # typecheck and tests
 ```
 
 Copy `.env.example` to `.env` for API keys. Never commit keys.
+
+## Website
+
+The marketing site, onboarding flow and control center live in `web/` (Vite + TypeScript, no framework).
+
+```
+cd web
+npm install
+npm run dev     # http://localhost:5173 (forwarded automatically in a Codespace)
+npm run build
+```
+
+Pages: `/` landing, `/onboarding.html`, `/app.html` (control center demo with example data). Onboarding and the control center are front-end demos with simulated sign-in and data until the backend modules are wired in. Design tokens are in `web/src/styles.css`.

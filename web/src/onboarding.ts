@@ -1,0 +1,100 @@
+import "./styles.css";
+import { drawPseudoQr } from "./common";
+
+const TOTAL = 6;
+const KEY = "vn.profile";
+type Profile = { email?: string; biz?: string; site?: string; sells?: string; size?: string; goal?: string; country?: string; type?: string; slack?: boolean };
+
+const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
+const steps = Array.from(document.querySelectorAll<HTMLElement>("[data-step]"));
+let current = 1;
+let profile: Profile = {};
+try { profile = JSON.parse(localStorage.getItem(KEY) ?? "{}"); } catch { /* storage unavailable */ }
+const save = () => { try { localStorage.setItem(KEY, JSON.stringify(profile)); } catch { /* ignore */ } };
+
+function show(n: number): void {
+  current = Math.min(Math.max(n, 1), TOTAL);
+  steps.forEach((s) => s.toggleAttribute("hidden", Number(s.dataset.step) !== current));
+  document.querySelectorAll("#progress i").forEach((el, i) => el.classList.toggle("on", i < current));
+  $("step-label").textContent = `Step ${current} of ${TOTAL}`;
+  window.scrollTo({ top: 0 });
+  if (current === 5) { drawPseudoQr($("qr") as HTMLCanvasElement, 7); $("qr-biz").textContent = profile.biz ?? "your"; }
+  if (current === 6) provision();
+}
+
+document.addEventListener("click", (e) => {
+  const t = (e.target as HTMLElement).closest<HTMLElement>("[data-next],[data-back]");
+  if (!t || t.id === "email-go" || t.id === "biz-go") return;
+  if (t.hasAttribute("data-back")) show(current - 1); else show(current + 1);
+});
+
+// Step 1
+$("email-go").addEventListener("click", () => {
+  const v = $<HTMLInputElement>("email").value.trim();
+  const ok = /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(v);
+  $("email-err").toggleAttribute("hidden", ok);
+  if (!ok) return;
+  profile.email = v; save(); show(2);
+});
+
+// Step 2: simulated website read (no network; derives plausible hints from the domain)
+let readTimer: number | undefined;
+$<HTMLInputElement>("site").addEventListener("input", (e) => {
+  const v = (e.target as HTMLInputElement).value.trim();
+  window.clearTimeout(readTimer);
+  const learn = $("learn");
+  if (!/\w\.\w/.test(v)) { learn.setAttribute("hidden", ""); return; }
+  learn.removeAttribute("hidden");
+  $("learn-text").textContent = "";
+  readTimer = window.setTimeout(() => {
+    $("learn-text").textContent = "Found your pages. Tone, customers and goals will be suggested on the next screen.";
+  }, 700);
+});
+$("size").addEventListener("click", (e) => {
+  const b = (e.target as HTMLElement).closest<HTMLButtonElement>(".chip");
+  if (!b) return;
+  $("size").querySelectorAll(".chip").forEach((c) => c.setAttribute("aria-pressed", String(c === b)));
+});
+$("biz-go").addEventListener("click", () => {
+  const biz = $<HTMLInputElement>("biz").value.trim();
+  $("biz-err").toggleAttribute("hidden", !!biz);
+  if (!biz) return;
+  profile.biz = biz;
+  profile.site = $<HTMLInputElement>("site").value.trim();
+  profile.sells = $<HTMLInputElement>("sells").value.trim();
+  profile.size = $("size").querySelector(".chip[aria-pressed='true']")?.textContent ?? "2–10";
+  $<HTMLInputElement>("c-type").value = profile.sells || "Small business";
+  save(); show(3);
+});
+
+// Step 3
+$("goal").addEventListener("click", (e) => {
+  const b = (e.target as HTMLElement).closest<HTMLButtonElement>(".chip");
+  if (!b) return;
+  $("goal").querySelectorAll(".chip").forEach((c) => { c.setAttribute("aria-pressed", String(c === b)); c.classList.remove("guess"); });
+  profile.goal = b.textContent ?? ""; save();
+});
+
+// Step 5
+$("slack-sim").addEventListener("click", () => {
+  profile.slack = true; save();
+  $("slack-ds").textContent = `Connected to ${profile.biz ?? "your"} workspace`;
+  $("slack-sim").setAttribute("hidden", "");
+  $("connect-go").textContent = "Continue";
+});
+
+// Step 6
+function provision(): void {
+  $("prov-h").textContent = `Setting up ${profile.biz ?? "your company"}`;
+  const items = Array.from(document.querySelectorAll<HTMLElement>("#prov li"));
+  items.forEach((li) => li.classList.remove("run", "done"));
+  $("open-app").setAttribute("hidden", "");
+  items.forEach((li, i) => {
+    window.setTimeout(() => { li.classList.add("run"); }, i * 700);
+    window.setTimeout(() => { li.classList.remove("run"); li.classList.add("done"); if (i === items.length - 1) $("open-app").removeAttribute("hidden"); }, i * 700 + 650);
+  });
+}
+
+if (profile.biz) $<HTMLInputElement>("biz").value = profile.biz;
+if (profile.email) $<HTMLInputElement>("email").value = profile.email;
+show(1);
