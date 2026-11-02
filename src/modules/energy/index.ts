@@ -29,6 +29,8 @@ export interface EnergyPlan {
   monthlyOvertimeCap: number;
   /** Hard stop for total real provider cost per month, in micro-dollars. Protects margin. */
   monthlyCostCapMicro: number;
+  /** ISO timestamp after which no work is allowed (end of free trial). */
+  expiresAt?: string;
 }
 
 /** Sensible starting plans; real numbers get tuned after measuring live usage. */
@@ -40,7 +42,7 @@ export const PLANS: Record<string, EnergyPlan> = {
 
 export type Verdict =
   | { allowed: true; overtime: boolean }
-  | { allowed: false; reason: "daily_quota_used" | "overtime_cap_reached" | "monthly_cost_cap_reached" };
+  | { allowed: false; reason: "daily_quota_used" | "overtime_cap_reached" | "monthly_cost_cap_reached" | "trial_ended" };
 
 export interface UsageRecord {
   workspaceId: string;
@@ -83,6 +85,7 @@ export class EnergyMeter {
   /** Ask before doing work. Does not change anything. */
   check(workspaceId: string, employeeId: string): Verdict {
     const plan = this.planOf(workspaceId);
+    if (plan.expiresAt && this.now().toISOString() > plan.expiresAt) return { allowed: false, reason: "trial_ended" };
     const day = this.today();
     const month = day.slice(0, 7);
     const mine = this.usage.filter((u) => u.workspaceId === workspaceId);
