@@ -1,0 +1,133 @@
+import "./styles.css";
+import { toast } from "./common";
+
+const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
+const app = $("app");
+
+// Profile from onboarding (falls back to the example business).
+let profile: { biz?: string; email?: string; slack?: boolean } = {};
+try { profile = JSON.parse(localStorage.getItem("vn.profile") ?? "{}"); } catch { /* ignore */ }
+const biz = profile.biz || "Kestrel Coffee";
+const initials = (s: string) => s.split(/\s+/).filter(Boolean).slice(0, 2).map((w) => w[0]!.toUpperCase()).join("") || "VN";
+$("org-name").textContent = biz;
+$("org-av").textContent = initials(biz);
+const owner = profile.email ? profile.email.split("@")[0]! : "You";
+$("owner-name").textContent = owner;
+$("me-av").textContent = $("owner-av").textContent = initials(owner);
+const h = new Date().getHours();
+$("greet").textContent = `${h < 12 ? "Good morning" : h < 18 ? "Good afternoon" : "Good evening"}, ${biz}`;
+if (profile.slack) $("slack-state").textContent = "On";
+document.title = `${biz} · Control center`;
+
+// Routing
+const screens = Array.from(document.querySelectorAll<HTMLElement>("[data-screen]"));
+function route(): void {
+  const key = location.hash.slice(1) || "home";
+  const valid = screens.some((s) => s.dataset.screen === key) ? key : "home";
+  screens.forEach((s) => s.toggleAttribute("hidden", s.dataset.screen !== valid));
+  document.querySelectorAll<HTMLAnchorElement>("[data-nav]").forEach((a) => {
+    if (a.dataset.nav === valid) a.setAttribute("aria-current", "page"); else a.removeAttribute("aria-current");
+  });
+  app.classList.remove("menu-open");
+  if (valid === "usage") drawBars();
+  window.scrollTo({ top: 0 });
+}
+window.addEventListener("hashchange", route);
+
+$("menu-btn").addEventListener("click", () => app.classList.toggle("menu-open"));
+$("scrim").addEventListener("click", () => app.classList.remove("menu-open"));
+
+// Toasts
+document.addEventListener("click", (e) => {
+  const t = (e.target as HTMLElement).closest<HTMLElement>("[data-toast]");
+  if (t) toast(t.dataset.toast ?? "");
+});
+
+// Needs-you + approvals share one list of pending items.
+const pending = new Set(["posts", "vat", "pack"]);
+const details: Record<string, { title: string; cost: string; leaves: string; prev: string; why: string; ok: string }> = {
+  posts: { title: "Schedule 3 Instagram posts", cost: "Cost so far: 9 energy", leaves: "<b>What will leave the company:</b> 3 posts with images, Thu 18:00, Fri 12:00, Sat 10:00.", prev: "<b>Post 1 of 3</b>Our autumn blend is here: toffee, baked apple and a little spice. Subscribers get it first on Thursday.", why: "Why these days: past posts get the most saves on Thursday evenings and Saturday mornings.", ok: "Approve and schedule" },
+  vat: { title: "Are you VAT registered?", cost: "No energy", leaves: "<b>Nothing leaves the company.</b> Your answer is stored in your profile.", prev: "<b>Why we ask</b>October's profit and loss depends on whether VAT applies to your sales.", why: "You can change this later in Settings.", ok: "Yes, registered" },
+  pack: { title: "Request quotes from 2 suppliers", cost: "Cost so far: 30 energy", leaves: "<b>What will leave the company:</b> 2 emails asking for quotes on your current packaging spec.", prev: "<b>Email 1 of 2</b>Hello, we are a small coffee roaster looking for a quote on 5,000 mailer boxes per quarter…", why: "Estimated saving: about £140 a month.", ok: "Send requests" },
+};
+let selected = "posts";
+
+function refresh(): void {
+  document.querySelectorAll<HTMLElement>("[data-need]").forEach((el) => el.toggleAttribute("hidden", !pending.has(el.dataset.need!)));
+  document.querySelectorAll<HTMLElement>("#alist [data-a]").forEach((el) => el.toggleAttribute("hidden", !pending.has(el.dataset.a!)));
+  const n = pending.size;
+  $("appr-count").textContent = String(n);
+  $("appr-count").toggleAttribute("hidden", n === 0);
+  $("need-count").textContent = n === 0 ? "All clear" : `${n} need${n === 1 ? "s" : ""} you`;
+  const needs = $("needs");
+  let clear = needs.querySelector(".all-clear");
+  if (n === 0 && !clear) { clear = document.createElement("p"); clear.className = "all-clear"; clear.textContent = "Nothing needs you right now. Your team is working."; needs.style.display = "block"; needs.appendChild(clear); }
+  if (!pending.has(selected)) selected = [...pending][0] ?? "";
+  $("adetail").toggleAttribute("hidden", !selected);
+  $("appr-empty").toggleAttribute("hidden", n > 0);
+  document.querySelectorAll<HTMLElement>("#alist [data-a]").forEach((el) => el.setAttribute("aria-pressed", String(el.dataset.a === selected)));
+  const d = details[selected];
+  if (d) {
+    $("a-title").textContent = d.title; $("a-cost").textContent = d.cost;
+    $("a-leaves").innerHTML = d.leaves; $("a-prev").innerHTML = d.prev; $("a-why").textContent = d.why; $("a-ok").textContent = d.ok;
+  }
+}
+function resolve(id: string, msg: string): void {
+  const card = document.querySelector<HTMLElement>(`[data-need="${id}"]`);
+  card?.classList.add("gone");
+  window.setTimeout(() => { pending.delete(id); refresh(); }, 220);
+  toast(msg);
+}
+document.addEventListener("click", (e) => {
+  const r = (e.target as HTMLElement).closest<HTMLElement>("[data-resolve]");
+  if (r) resolve(r.dataset.resolve!, r.dataset.msg ?? "Done");
+  const a = (e.target as HTMLElement).closest<HTMLElement>("#alist [data-a]");
+  if (a) { selected = a.dataset.a!; refresh(); }
+});
+$("a-ok").addEventListener("click", () => resolve(selected, "Approved"));
+$("a-redo").addEventListener("click", () => toast("Redo requested, energy returned"));
+$("a-edit").addEventListener("click", () => toast("Editing opens in the web editor (demo)"));
+
+// Ask bar
+$<HTMLFormElement>("ask").addEventListener("submit", (e) => {
+  e.preventDefault();
+  const input = $<HTMLInputElement>("ask-in");
+  if (!input.value.trim()) return;
+  toast("Team lead got it and will route it (demo)");
+  input.value = "";
+});
+document.addEventListener("keydown", (e) => {
+  const tag = (e.target as HTMLElement).tagName;
+  if (e.key === "/" && tag !== "INPUT" && tag !== "TEXTAREA") { e.preventDefault(); $("ask-in").focus(); }
+});
+
+// Skill tuning
+const skills: Record<string, string> = { Standard: "100 · £12.30/mo", Pro: "200 · £21.40/mo", Expert: "400 · £38.00/mo" };
+$("skill").addEventListener("click", (e) => {
+  const b = (e.target as HTMLElement).closest<HTMLButtonElement>(".chip");
+  if (!b) return;
+  $("skill").querySelectorAll(".chip").forEach((c) => c.setAttribute("aria-pressed", String(c === b)));
+  $("skill-out").textContent = skills[b.textContent ?? "Standard"] ?? "";
+});
+
+// Usage chart (static example data, rendered as SVG)
+let drawn = false;
+function drawBars(): void {
+  if (drawn) return; drawn = true;
+  const days = ["Tue", "Wed", "Thu", "Fri", "Sat", "Sun", "Mon"];
+  const data = [[40, 70, 50], [55, 90, 60], [30, 110, 45], [62, 85, 70], [20, 40, 25], [15, 30, 20], [28, 79, 45]];
+  const colors = ["#305fbd", "#625fff", "#ff7dda"];
+  const x0 = 44, w = 646, top = 16, bottom = 150, max = 300, slot = w / days.length, bw = 44;
+  const y = (v: number) => bottom - ((bottom - top) * v) / max;
+  let s = `<g font-family="IBM Plex Mono, monospace" font-size="11" fill="#abaebb">`;
+  for (const v of [0, 150, 300]) s += `<line x1="${x0}" x2="690" y1="${y(v)}" y2="${y(v)}" stroke="#151e32" ${v === 300 ? 'stroke-dasharray="4 4"' : ""}/><text x="38" y="${y(v) + 4}" text-anchor="end">${v}</text>`;
+  data.forEach((row, i) => {
+    let acc = 0; const cx = x0 + slot * i + (slot - bw) / 2;
+    row.forEach((v, k) => { const y1 = y(acc + v); const hgt = y(acc) - y1; s += `<rect x="${cx}" y="${y1}" width="${bw}" height="${Math.max(hgt - 1, 0)}" rx="${k === 2 ? 4 : 1}" fill="${colors[k]}"/>`; acc += v; });
+    s += `<text x="${cx + bw / 2}" y="170" text-anchor="middle">${days[i]}</text>`;
+  });
+  $("bars").innerHTML = s + "</g>";
+}
+
+refresh();
+route();

@@ -1,0 +1,133 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Set up your team · Virtual Nafree</title>
+<meta name="theme-color" content="#0b0c0e">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Figtree:wght@500;600&family=IBM+Plex+Mono:wght@400&family=Inter:wght@300;400;500;600&display=swap">
+</head>
+<body>
+<div class="ob-shell">
+  <div class="container ob-top">
+    <a class="logo" href="/"><svg viewBox="0 0 32 32" aria-hidden="true"><defs><linearGradient id="lg" x1="0" x2="1" y1="0" y2="1"><stop offset="0" stop-color="#625fff"/><stop offset="1" stop-color="#ff7dda"/></linearGradient></defs><rect width="32" height="32" rx="8" fill="#0e111b" stroke="#24375a"/><path d="M8 9l8 15 8-15" fill="none" stroke="url(#lg)" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/></svg>Virtual Nafree</a>
+    <div class="ob-progress" id="progress" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i></div>
+    <span class="ob-step-label" id="step-label">Step 1 of 6</span>
+  </div>
+
+  <main class="ob-main"><div class="container" style="display:grid;place-items:start center">
+
+  <!-- 1 Sign in -->
+  <section class="ob-card" data-step="1">
+    <h1>Hire your AI team in three minutes</h1>
+    <p class="sub">Finance, marketing and a business consultant who know your business. Free for 7 days, no card.</p>
+    <div class="ob-panel">
+      <button class="btn btn-provider btn-block" data-next>
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="#4285f4" d="M21.6 12.2c0-.7-.1-1.3-.2-1.9H12v3.6h5.4a4.6 4.6 0 01-2 3v2.5h3.2c1.9-1.7 3-4.3 3-7.200z"/><path fill="#34a853" d="M12 22c2.7 0 5-.9 6.6-2.500l-3.2-2.500c-.9.6-2 1-3.4 1-2.6 0-4.8-1.8-5.6-4.100H3.100v2.600A10 10 0 0012 22z"/><path fill="#fbbc05" d="M6.4 13.900a6 6 0 010-3.800V7.500H3.100a10 10 0 000 9z"/><path fill="#ea4335" d="M12 6c1.5 0 2.8.5 3.8 1.500l2.9-2.900A10 10 0 003.1 7.500l3.3 2.600C7.2 7.8 9.4 6 12 6z"/></svg>
+        Continue with Google</button>
+      <button class="btn btn-provider btn-block" data-next>
+        <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="8.5" height="8.5" fill="#f25022"/><rect x="12.5" y="3" width="8.5" height="8.5" fill="#7fba00"/><rect x="3" y="12.5" width="8.5" height="8.5" fill="#00a4ef"/><rect x="12.5" y="12.5" width="8.5" height="8.5" fill="#ffb900"/></svg>
+        Continue with Microsoft</button>
+      <div class="or">or</div>
+      <div class="field"><label for="email">Work email</label><input class="input" id="email" type="email" placeholder="you@business.com" autocomplete="email"><span class="hint">We will email a sign-in link. No password.</span></div>
+      <button class="btn btn-primary btn-block" id="email-go">Continue</button>
+      <p class="err" id="email-err" hidden>Enter a valid email address.</p>
+    </div>
+    <p class="hint">Demo build: sign-in is simulated and nothing is sent or stored on a server.</p>
+  </section>
+
+  <!-- 2 Business -->
+  <section class="ob-card" data-step="2" hidden>
+    <h1>Tell us about your business</h1>
+    <p class="sub">Only the name and team size are needed. A website saves you the rest.</p>
+    <div class="ob-panel">
+      <div class="field"><label for="biz">Business name</label><input class="input" id="biz" placeholder="Kestrel Coffee" autocomplete="organization"></div>
+      <div class="field"><label for="site">Website or social page <span class="hint">(optional)</span></label><input class="input" id="site" placeholder="kestrelcoffee.co.uk" inputmode="url"></div>
+      <div class="learn" id="learn" hidden><b>Reading your website…</b><span id="learn-text"></span></div>
+      <div class="field"><label for="sells">What do you sell, in one line?</label><input class="input" id="sells" placeholder="Freshly roasted coffee by monthly subscription"></div>
+      <div class="field"><span class="label" id="size-l">How many people work here?</span>
+        <div class="chips" role="group" aria-labelledby="size-l" id="size">
+          <button class="chip" aria-pressed="false">Just me</button><button class="chip" aria-pressed="true">2–10</button><button class="chip" aria-pressed="false">11–50</button><button class="chip" aria-pressed="false">50+</button>
+        </div></div>
+      <p class="err" id="biz-err" hidden>Add your business name to continue.</p>
+      <div class="ob-actions"><button class="btn btn-ghost" data-back>Back</button><button class="btn btn-primary" id="biz-go">Continue</button></div>
+    </div>
+  </section>
+
+  <!-- 3 Confirm -->
+  <section class="ob-card" data-step="3" hidden>
+    <h1>Here is what your team will know about you</h1>
+    <p class="sub">Tap any value to fix it. Dashed chips are our guess.</p>
+    <div class="ob-panel">
+      <div>
+        <div class="prow"><span>Country</span><span class="val"><input class="input" id="c-country" value="United Kingdom" aria-label="Country"><span class="src">browser</span></span></div>
+        <div class="prow"><span>Currency · time zone</span><span class="val" id="c-cur">GBP · Europe/London</span></div>
+        <div class="prow"><span>Business type</span><span class="val"><input class="input" id="c-type" aria-label="Business type"><span class="src">site</span></span></div>
+        <div class="prow"><span>Customers</span><span class="val" id="c-cust">Home coffee drinkers<span class="src">site</span></span></div>
+        <div class="prow"><span>Tone</span><span class="val" id="c-tone">Warm, plain, a bit playful<span class="src">site</span></span></div>
+      </div>
+      <div class="field"><span class="label" id="goal-l">Main goal for the next 3 months</span>
+        <div class="chips" role="group" aria-labelledby="goal-l" id="goal">
+          <button class="chip guess" aria-pressed="true">More customers</button><button class="chip" aria-pressed="false">Cut costs</button><button class="chip" aria-pressed="false">Raise money</button><button class="chip" aria-pressed="false">Get organised</button>
+        </div></div>
+      <div class="ob-actions"><button class="btn btn-ghost" data-back>Back</button><button class="btn btn-primary" data-next>Looks right</button></div>
+    </div>
+  </section>
+
+  <!-- 4 Team -->
+  <section class="ob-card" data-step="4" hidden>
+    <h1>Your team is ready to start</h1>
+    <p class="sub">Each employee has a first useful job lined up.</p>
+    <div class="ob-panel">
+      <div class="team-row"><span class="av av-tl">TL</span><div><b>Team lead</b> <span class="first">· free, runs the team</span></div></div>
+      <div class="team-row"><span class="av av-fm">FM</span><div><b>Finance manager</b><div class="first">First: cash snapshot</div><div class="energy"><i style="width:100%"></i></div></div></div>
+      <div class="team-row"><span class="av av-mm">MM</span><div><b>Marketing manager</b><div class="first">First: 30-day plan</div><div class="energy"><i style="width:100%"></i></div></div></div>
+      <div class="team-row"><span class="av av-bc">BC</span><div><b>Business consultant</b><div class="first">First: cost check</div><div class="energy"><i style="width:100%"></i></div></div></div>
+      <p class="small muted">Free for 7 days with full energy. After that <span class="mono" style="color:#fff">£37/mo</span> for this team, changeable any time.</p>
+      <div class="ob-actions"><button class="btn btn-ghost" data-back>Back</button><button class="btn btn-primary" data-next>Start my team</button></div>
+    </div>
+  </section>
+
+  <!-- 5 Connect -->
+  <section class="ob-card" data-step="5" hidden>
+    <h1>Talk to your team where you already work</h1>
+    <p class="sub">Scan once, approve once. You can skip this and connect later.</p>
+    <div class="ob-panel">
+      <div class="qrwrap">
+        <div class="qr"><canvas id="qr" aria-label="Example QR code"></canvas></div>
+        <p class="small mist">Scan with your phone camera to add <b id="qr-biz">your</b> team to <b>Slack</b>. Approve once, and the computer updates on its own. The code expires in 10 minutes.</p>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:8px">
+        <div class="app-row"><span class="lg"><svg viewBox="0 0 24 24"><rect x="9.5" y="2" width="3" height="8" rx="1.5" fill="#36c5f0"/><rect x="14" y="9.5" width="8" height="3" rx="1.5" fill="#2eb67d"/><rect x="11.5" y="14" width="3" height="8" rx="1.5" fill="#ecb22e"/><rect x="2" y="11.5" width="8" height="3" rx="1.5" fill="#e01e5a"/></svg></span><div><div class="nm">Slack</div><div class="ds" id="slack-ds">Waiting for scan</div></div><button class="btn btn-sm btn-ghost" id="slack-sim">Simulate scan</button></div>
+        <div class="app-row" style="opacity:.55"><span class="lg" style="font-weight:600">T</span><div><div class="nm">Microsoft Teams</div><div class="ds">Coming soon</div></div><span class="badge badge-dark">Soon</span></div>
+        <div class="app-row" style="opacity:.55"><span class="lg" style="font-weight:600">W</span><div><div class="nm">WhatsApp</div><div class="ds">Coming soon</div></div><span class="badge badge-dark">Soon</span></div>
+      </div>
+      <div class="learn"><b>No phone handy?</b>Use this computer instead, or send the link to your admin. Everything also works in the web app with a daily email briefing.</div>
+      <div class="ob-actions"><button class="btn btn-ghost" data-back>Back</button><button class="btn btn-primary" id="connect-go" data-next>Do this later</button></div>
+    </div>
+  </section>
+
+  <!-- 6 Provision -->
+  <section class="ob-card" data-step="6" hidden>
+    <h1 id="prov-h">Setting up your company</h1>
+    <div class="ob-panel">
+      <ul class="prov" id="prov">
+        <li><span class="pdot"></span>Private workspace and storage created</li>
+        <li><span class="pdot"></span>Team lead and 3 employees hired</li>
+        <li><span class="pdot"></span>Bookkeeping rules and accounts loaded</li>
+        <li><span class="pdot"></span>Writing your brand guide</li>
+        <li><span class="pdot"></span>Safety checks</li>
+      </ul>
+      <div class="learn"><b>While you wait</b>Your Finance manager will ask how you want to share sales and costs. You can answer from the control center.</div>
+      <a class="btn btn-primary btn-block" id="open-app" href="/app.html" hidden>Open my control center</a>
+    </div>
+  </section>
+
+  </div></main>
+</div>
+<script type="module" src="/src/onboarding.ts"></script>
+</body>
+</html>
