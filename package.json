@@ -1,9 +1,9 @@
 {
-  "name": "activa-core",
+  "name": "virtual-nafree",
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "Activa Core: a store of AI employees for people who know nothing about AI.",
+  "description": "Virtual Nafree: a store of AI employees for people who know nothing about AI.",
   "scripts": {
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
