@@ -22,7 +22,7 @@ The marketing site, onboarding flow and control center live in `web/` (Vite + Ty
 ```
 cd web
 npm install
-npm run dev     # http://localhost:5173
+npm run dev     # http://localhost:5173 (forwarded automatically in a Codespace)
 npm run build
 ```
 

@@ -5,7 +5,7 @@
   "type": "module",
   "description": "Virtual Nafree website: marketing landing page, onboarding and control center.",
   "scripts": {
-    "dev": "vite",
+    "dev": "vite --host 0.0.0.0",
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit"
