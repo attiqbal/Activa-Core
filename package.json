@@ -1,0 +1,17 @@
+{
+  "name": "activa-core",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Activa Core: a store of AI employees for people who know nothing about AI.",
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "check": "npm run typecheck && npm test"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "typescript": "^5.6.0",
+    "vitest": "^2.1.0"
+  }
+}
