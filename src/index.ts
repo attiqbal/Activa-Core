@@ -5,3 +5,5 @@ export { ModelGateway } from "./modules/model-gateway/gateway.js";
 export { AnthropicAdapter } from "./modules/model-gateway/adapters/anthropic.js";
 export { OpenAICompatibleAdapter } from "./modules/model-gateway/adapters/openai-compatible.js";
 export { MockAdapter } from "./modules/model-gateway/adapters/mock.js";
+export { WorkforceService, type BusinessProfile, type Employee, type TaskResult } from "./modules/workforce/index.js";
+export { TEMPLATES, getTemplate, type EmployeeTemplate } from "./modules/workforce/templates.js";
