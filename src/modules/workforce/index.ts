@@ -106,6 +106,8 @@ export class WorkforceService {
     try {
       const result = await this.gateway.complete({
         tier: template.tier,
+        // Long deliverables (reports, journals) must not be cut off mid-sentence.
+        maxTokens: 4096,
         messages: [
           { role: "system", content: system },
           { role: "user", content: brief },

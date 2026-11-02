@@ -33,7 +33,7 @@ class Recorder implements ModelAdapter {
 
 describe("templates", () => {
   it("starts with the three agreed employees", () => {
-    expect(TEMPLATES.map((t) => t.key).sort()).toEqual(["finance-manager", "market-analyst", "marketing-manager"]);
+    expect(TEMPLATES.map((t) => t.key).sort()).toEqual(["business-consultant", "finance-manager", "marketing-manager"]);
   });
 });
 
@@ -99,7 +99,7 @@ describe("assigning work", () => {
     const { identity, workforce } = setup();
     const a = await identity.createWorkspace("alice", { name: "A" });
     const b = await identity.createWorkspace("bob", { name: "B" });
-    const e = await workforce.hire("alice", a.id, "market-analyst");
+    const e = await workforce.hire("alice", a.id, "business-consultant");
     await expect(workforce.assign("bob", b.id, e.id, "Research")).rejects.toThrow(/employee not found/);
     await expect(workforce.assign("bob", a.id, e.id, "Research")).rejects.toThrow(PermissionError);
   });
@@ -108,7 +108,7 @@ describe("assigning work", () => {
     const { identity, workforce } = setup();
     const ws = await identity.createWorkspace("owner", { name: "Acme" });
     identity.addMember("owner", ws.id, "v", "viewer");
-    const e = await workforce.hire("owner", ws.id, "market-analyst");
+    const e = await workforce.hire("owner", ws.id, "business-consultant");
     await expect(workforce.assign("v", ws.id, e.id, "Research")).rejects.toThrow(PermissionError);
   });
 
@@ -166,5 +166,35 @@ describe("finance rules packs", () => {
     const e = await workforce.hire("owner", ws.id, "marketing-manager");
     await workforce.assign("owner", ws.id, e.id, "Post");
     expect(rec.last?.messages[0]?.content).not.toContain("double-entry");
+  });
+});
+
+describe("deliverable length", () => {
+  it("allows long deliverables instead of the small default", async () => {
+    const rec = new Recorder();
+    const { identity, workforce } = setup([rec]);
+    const ws = await identity.createWorkspace("owner", { name: "Acme" });
+    const e = await workforce.hire("owner", ws.id, "marketing-manager");
+    await workforce.assign("owner", ws.id, e.id, "Write a full campaign plan");
+    expect(rec.last?.maxTokens).toBeGreaterThanOrEqual(4096);
+  });
+});
+
+describe("business consultant", () => {
+  it("asks for the strong model and is told to rank by value, never invent figures and never spend", async () => {
+    const rec = new Recorder();
+    const { identity, workforce } = setup([rec]);
+    const ws = await identity.createWorkspace("owner", { name: "Acme" });
+    const e = await workforce.hire("owner", ws.id, "business-consultant");
+    await workforce.assign("owner", ws.id, e.id, "Where can we cut costs?");
+    expect(rec.last?.tier).toBe("premium");
+    const system = rec.last?.messages[0]?.content ?? "";
+    expect(system).toContain("best bang for the buck");
+    expect(system).toContain("Never invent figures");
+    expect(system).toContain("you never spend money");
+  });
+
+  it("the old Market analyst is gone", () => {
+    expect(TEMPLATES.some((t) => t.key === "market-analyst")).toBe(false);
   });
 });
