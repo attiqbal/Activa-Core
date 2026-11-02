@@ -4,6 +4,7 @@ import type { EventBus } from "../../core/events.js";
 import type { IdentityService } from "../identity/index.js";
 import type { ModelGateway } from "../model-gateway/gateway.js";
 import { getTemplate } from "./templates.js";
+import type { EnergyMeter } from "../energy/index.js";
 import { describePack, packFor } from "./finance/rules-pack.js";
 
 /** Describes the business so every employee can tailor its work. */
@@ -23,7 +24,7 @@ export interface Employee {
   name: string;
 }
 
-export type TaskStatus = "ready_for_review" | "failed";
+export type TaskStatus = "ready_for_review" | "failed" | "no_energy";
 
 export interface TaskResult {
   id: Id<"task">;
@@ -31,6 +32,9 @@ export interface TaskResult {
   employeeId: string;
   brief: string;
   status: TaskStatus;
+  /** Why work did not start (no_energy only). */
+  reason?: string;
+  energyUsed?: number;
   /** The employee's draft. Nothing is ever sent outside the platform. */
   deliverable?: string;
   provider?: string;
@@ -48,6 +52,7 @@ export class WorkforceService {
     private audit: AuditLog,
     private bus: EventBus,
     private gateway: ModelGateway,
+    private energy?: EnergyMeter,
   ) {}
 
   setProfile(userId: string, workspaceId: string, profile: BusinessProfile): void {
@@ -101,6 +106,15 @@ export class WorkforceService {
     if (template.key === "finance-manager") parts.push(describePack(packFor(profile?.country)));
     const system = parts.join("\n\n");
 
+    // The employee only starts work if there is energy left (or paid overtime).
+    const verdict = this.energy?.check(workspaceId, employeeId) ?? { allowed: true as const, overtime: false };
+    if (!verdict.allowed) {
+      const blocked: TaskResult = { id: newId("task"), workspaceId, employeeId, brief, status: "no_energy", reason: verdict.reason };
+      this.tasks.set(blocked.id, blocked);
+      this.audit.record({ workspaceId, actor: `user:${userId}`, action: "task.blocked", target: blocked.id, data: { reason: verdict.reason } });
+      await this.bus.publish({ type: "energy.exhausted", workspaceId, payload: { employeeId, reason: verdict.reason }, at: new Date() });
+      return blocked;
+    }
     const task: TaskResult = { id: newId("task"), workspaceId, employeeId, brief, status: "ready_for_review" };
     this.audit.record({ workspaceId, actor: `user:${userId}`, action: "task.created", target: task.id });
     try {
@@ -117,6 +131,7 @@ export class WorkforceService {
       task.provider = result.provider;
       task.inputTokens = result.inputTokens;
       task.outputTokens = result.outputTokens;
+      task.energyUsed = this.energy?.record(workspaceId, employeeId, result.provider, result.inputTokens, result.outputTokens, verdict.overtime).energy;
     } catch {
       task.status = "failed";
     }
