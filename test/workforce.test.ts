@@ -8,6 +8,8 @@ import {
   PermissionError,
   TEMPLATES,
   WorkforceService,
+  packFor,
+  registerPack,
 } from "../src/index.js";
 import type { CompletionRequest, CompletionResult, ModelAdapter } from "../src/modules/model-gateway/types.js";
 
@@ -117,5 +119,52 @@ describe("assigning work", () => {
     const t = await workforce.assign("owner", ws.id, e.id, "Post");
     expect(t.status).toBe("failed");
     expect(audit.list(ws.id).map((x) => x.action)).toContain("task.failed");
+  });
+});
+
+describe("finance rules packs", () => {
+  it("finance manager gets bookkeeping rules and a no-tax-advice instruction", async () => {
+    const rec = new Recorder();
+    const { identity, workforce } = setup([rec]);
+    const ws = await identity.createWorkspace("owner", { name: "Acme" });
+    const e = await workforce.hire("owner", ws.id, "finance-manager");
+    await workforce.assign("owner", ws.id, e.id, "Record this month's sales");
+    const system = rec.last?.messages[0]?.content ?? "";
+    expect(system).toContain("double-entry");
+    expect(system).toContain("You do NOT give tax advice");
+    expect(system).toContain("NOT been reviewed");
+  });
+
+  it("uses a country pack when one is registered, and says whether it was reviewed", async () => {
+    registerPack({
+      country: "ZZ",
+      name: "Testland",
+      reviewed: true,
+      recordKeeping: ["Keep invoices in Testland format."],
+      doNotGuess: ["Testland tax rates"],
+    });
+    const rec = new Recorder();
+    const { identity, workforce } = setup([rec]);
+    const ws = await identity.createWorkspace("owner", { name: "Acme" });
+    workforce.setProfile("owner", ws.id, { description: "Shop", country: "zz" });
+    const e = await workforce.hire("owner", ws.id, "finance-manager");
+    await workforce.assign("owner", ws.id, e.id, "Book a sale");
+    const system = rec.last?.messages[0]?.content ?? "";
+    expect(system).toContain("Testland");
+    expect(system).toContain("reviewed by a qualified accountant");
+  });
+
+  it("falls back to the generic pack for an unknown country", () => {
+    expect(packFor("XX").country).toBe("GENERIC");
+    expect(packFor(undefined).country).toBe("GENERIC");
+  });
+
+  it("other employees do not receive finance rules", async () => {
+    const rec = new Recorder();
+    const { identity, workforce } = setup([rec]);
+    const ws = await identity.createWorkspace("owner", { name: "Acme" });
+    const e = await workforce.hire("owner", ws.id, "marketing-manager");
+    await workforce.assign("owner", ws.id, e.id, "Post");
+    expect(rec.last?.messages[0]?.content).not.toContain("double-entry");
   });
 });

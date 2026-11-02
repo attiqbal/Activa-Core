@@ -4,6 +4,7 @@ import type { EventBus } from "../../core/events.js";
 import type { IdentityService } from "../identity/index.js";
 import type { ModelGateway } from "../model-gateway/gateway.js";
 import { getTemplate } from "./templates.js";
+import { describePack, packFor } from "./finance/rules-pack.js";
 
 /** Describes the business so every employee can tailor its work. */
 export interface BusinessProfile {
@@ -92,10 +93,13 @@ export class WorkforceService {
     if (!template) throw new Error("employee template missing");
 
     const profile = this.profiles.get(workspaceId);
-    const system = [
+    const parts = [
       template.instructions,
       profile ? `Business profile:\n${JSON.stringify(profile, null, 2)}` : "No business profile has been set yet.",
-    ].join("\n\n");
+    ];
+    // The Finance manager keeps books to the owner's country rules (or a safe generic set).
+    if (template.key === "finance-manager") parts.push(describePack(packFor(profile?.country)));
+    const system = parts.join("\n\n");
 
     const task: TaskResult = { id: newId("task"), workspaceId, employeeId, brief, status: "ready_for_review" };
     this.audit.record({ workspaceId, actor: `user:${userId}`, action: "task.created", target: task.id });

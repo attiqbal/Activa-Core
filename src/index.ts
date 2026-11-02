@@ -7,3 +7,4 @@ export { OpenAICompatibleAdapter } from "./modules/model-gateway/adapters/openai
 export { MockAdapter } from "./modules/model-gateway/adapters/mock.js";
 export { WorkforceService, type BusinessProfile, type Employee, type TaskResult } from "./modules/workforce/index.js";
 export { TEMPLATES, getTemplate, type EmployeeTemplate } from "./modules/workforce/templates.js";
+export { GENERIC_PACK, registerPack, packFor, describePack, type RulesPack } from "./modules/workforce/finance/rules-pack.js";
