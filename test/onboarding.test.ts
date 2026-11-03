@@ -14,9 +14,9 @@ function setup(clock = { d: new Date("2026-05-01T12:00:00Z") }) {
 }
 
 describe("blueprint", () => {
-  it("always includes the three standard employees and waitlists unbuilt add-ons", () => {
-    const b = buildBlueprint({ ...base, addOns: ["video-editor", "finance-manager"] });
-    expect(b.employees).toEqual(["finance-manager", "marketing-manager", "business-consultant"]);
+  it("always includes the four basic-package employees and waitlists unbuilt add-ons", () => {
+    const b = buildBlueprint({ ...base, addOns: ["video-editor", "finance-manager", "admin-manager"] });
+    expect(b.employees).toEqual(["finance-manager", "marketing-manager", "business-consultant", "hr-manager"]);
     expect(b.waitlist).toEqual(["video-editor"]);
     expect(b.trialDays).toBe(7);
   });
@@ -32,6 +32,12 @@ describe("blueprint", () => {
     expect(buildBlueprint({ ...base, teamSize: "51+" }).privacy).toBe("own-database");
     expect(buildBlueprint({ ...base, privacy: "own-server" }).privacy).toBe("own-server");
   });
+  it("contacts the owner on the dashboard unless they chose a chat app they can use", () => {
+    expect(buildBlueprint(base).contact).toBe("dashboard");
+    expect(buildBlueprint({ ...base, contact: "slack" }).contact).toBe("slack");
+    expect(buildBlueprint({ ...base, contact: "teams" }).contact).toBe("dashboard");
+    expect(buildBlueprint({ ...base, contact: "teams", addOns: ["teams"] }).contact).toBe("teams");
+  });
   it("rejects missing basics", () => {
     expect(() => buildBlueprint({ ...base, businessName: " " })).toThrow(SignupError);
     expect(() => buildBlueprint({ ...base, country: "" })).toThrow(SignupError);
@@ -42,7 +48,9 @@ describe("signUp", () => {
   it("provisions workspace, team, books and a 7-day trial in one step", async () => {
     const { onboarding, wf, ledger, energy, clock } = setup();
     const org = await onboarding.signUp("founder", base);
-    expect(wf.team("founder", org.workspaceId)).toHaveLength(3);
+    expect(wf.team("founder", org.workspaceId)).toHaveLength(5); // 4 employees + free Admin manager
+    expect(org.employeeIds).toHaveLength(4);
+    expect(wf.team("founder", org.workspaceId).find((e) => e.id === org.adminManagerId)?.templateKey).toBe("admin-manager");
     expect(ledger.chart("founder", org.workspaceId).length).toBeGreaterThan(5);
     expect(org.trialEndsAt).toBe("2026-05-08T12:00:00.000Z");
     const t = await wf.assign("founder", org.workspaceId, org.employeeIds[0]!, "hello");

@@ -1,11 +1,12 @@
 import "./styles.css";
 import { toast } from "./common";
+import { initSetup } from "./setup";
 
 const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
 const app = $("app");
 
 // Profile from onboarding (falls back to the example business).
-let profile: { biz?: string; email?: string; slack?: boolean } = {};
+let profile: { biz?: string; email?: string; slack?: boolean; contact?: string } = {};
 try { profile = JSON.parse(localStorage.getItem("vn.profile") ?? "{}"); } catch { /* ignore */ }
 const biz = profile.biz || "Kestrel Coffee";
 const initials = (s: string) => s.split(/\s+/).filter(Boolean).slice(0, 2).map((w) => w[0]!.toUpperCase()).join("") || "VN";
@@ -93,7 +94,7 @@ $<HTMLFormElement>("ask").addEventListener("submit", (e) => {
   e.preventDefault();
   const input = $<HTMLInputElement>("ask-in");
   if (!input.value.trim()) return;
-  toast("Team lead got it and will route it (demo)");
+  toast("Admin manager got it and will route it (demo)");
   input.value = "";
 });
 document.addEventListener("keydown", (e) => {
@@ -130,4 +131,5 @@ function drawBars(): void {
 }
 
 refresh();
+initSetup(biz, profile.contact === "slack" ? "slack" : "dashboard");
 route();

@@ -105,11 +105,35 @@ export class ChannelRouter {
     return "replied";
   }
 
+  /** True when the organisation has this chat app connected. */
+  isConnected(workspaceId: string, channel: ChannelKind): boolean {
+    return [...this.connections.values()].some((c) => c.workspaceId === workspaceId && c.channel === channel);
+  }
+
+  /**
+   * Sends a direct message from the platform to one linked person (for example the Admin
+   * manager writing to the owner). Returns false when the chat app is not connected or the
+   * person has not linked their chat account yet, so the caller can try again later.
+   */
+  async sendToUser(workspaceId: string, channel: ChannelKind, userId: string, text: string): Promise<boolean> {
+    const chat = this.channels.get(channel);
+    if (!chat) return false;
+    for (const [key, linked] of this.links) {
+      if (linked !== userId) continue;
+      const [kind, externalWorkspace, externalUser] = key.split(":") as [ChannelKind, string, string];
+      if (kind !== channel || this.connections.get(`${kind}:${externalWorkspace}`)?.workspaceId !== workspaceId) continue;
+      // Slack accepts a user id as the channel and posts in the app's direct messages.
+      await chat.send(externalWorkspace, externalUser, text);
+      return true;
+    }
+    return false;
+  }
+
   /** "finance: how much runway do we have?" goes to the Finance manager; otherwise the default employee. */
   private pickEmployee(userId: string, conn: Connection, text: string) {
-    const m = /^\s*(finance|marketing|consultant)\s*[:,-]\s*(.+)$/is.exec(text);
+    const m = /^\s*(finance|marketing|consultant|hr|admin)\s*[:,-]\s*(.+)$/is.exec(text);
     if (m) {
-      const key = { finance: "finance-manager", marketing: "marketing-manager", consultant: "business-consultant" }[m[1]!.toLowerCase() as "finance"];
+      const key = { finance: "finance-manager", marketing: "marketing-manager", consultant: "business-consultant", hr: "hr-manager", admin: "admin-manager" }[m[1]!.toLowerCase() as "finance"];
       const emp = this.workforce.team(userId, conn.workspaceId).find((e) => e.templateKey === key);
       if (emp) return { employeeId: emp.id as string, brief: m[2]!.trim() };
     }

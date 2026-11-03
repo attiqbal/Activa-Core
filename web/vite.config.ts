@@ -3,6 +3,8 @@ import { defineConfig } from "vite";
 
 // Multi-page static site: landing, onboarding flow and the control center.
 export default defineConfig({
+  // The setup form and Admin manager messages are imported from the backend's pure modules (../src).
+  server: { fs: { allow: [".."] } },
   build: {
     rollupOptions: {
       input: {

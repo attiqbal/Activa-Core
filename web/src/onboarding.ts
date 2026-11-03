@@ -3,7 +3,7 @@ import { drawPseudoQr } from "./common";
 
 const TOTAL = 6;
 const KEY = "vn.profile";
-type Profile = { email?: string; biz?: string; site?: string; sells?: string; size?: string; goal?: string; country?: string; type?: string; slack?: boolean };
+type Profile = { email?: string; biz?: string; site?: string; sells?: string; size?: string; goal?: string; country?: string; type?: string; slack?: boolean; contact?: "dashboard" | "slack" };
 
 const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
 const steps = Array.from(document.querySelectorAll<HTMLElement>("[data-step]"));
@@ -81,6 +81,13 @@ $("slack-sim").addEventListener("click", () => {
   $("slack-ds").textContent = `Connected to ${profile.biz ?? "your"} workspace`;
   $("slack-sim").setAttribute("hidden", "");
   $("connect-go").textContent = "Continue";
+});
+
+$("contact").addEventListener("click", (e) => {
+  const b = (e.target as HTMLElement).closest<HTMLButtonElement>(".chip");
+  if (!b) return;
+  $("contact").querySelectorAll(".chip").forEach((c) => c.setAttribute("aria-pressed", String(c === b)));
+  profile.contact = b.dataset.v === "slack" ? "slack" : "dashboard"; save();
 });
 
 // Step 6

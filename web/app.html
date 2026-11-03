@@ -16,6 +16,7 @@
     <a class="logo" href="/"><svg viewBox="0 0 32 32" aria-hidden="true"><defs><linearGradient id="lg" x1="0" x2="1" y1="0" y2="1"><stop offset="0" stop-color="#625fff"/><stop offset="1" stop-color="#ff7dda"/></linearGradient></defs><rect width="32" height="32" rx="8" fill="#0e111b" stroke="#24375a"/><path d="M8 9l8 15 8-15" fill="none" stroke="url(#lg)" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/></svg>Virtual Nafree</a>
     <div class="rail-org"><span class="av av-sm av-me" id="org-av">KC</span><span id="org-name">Kestrel Coffee</span></div>
     <a class="ni" href="#home" data-nav="home"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></svg>Control center</a>
+<a class="ni" href="#setup" data-nav="setup"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 5h16v11H9l-5 4z"/></svg>Setup<span class="count" id="setup-badge">1</span></a>
 <a class="ni" href="#approvals" data-nav="approvals"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>Approvals<span class="count" id="appr-count">3</span></a>
 <a class="ni" href="#work" data-nav="work"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="5" height="16" rx="1.5"/><rect x="10" y="4" width="5" height="10" rx="1.5"/><rect x="17" y="4" width="4" height="13" rx="1.5"/></svg>Work</a>
 <a class="ni" href="#team" data-nav="team"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="8" r="3.2"/><path d="M3 20c0-3.3 2.7-5.5 6-5.5s6 2.200 6 5.5"/><path d="M16 5.5a3 3 0 010 5.5M18 14.7c1.800.7 3 2.400 3 5.3"/></svg>Team</a>
@@ -41,6 +42,7 @@
       <section class="panel" aria-labelledby="needs-h">
         <div class="panel-h"><h2 id="needs-h">Needs you</h2><span class="r">Clears as you act · usually under 2 minutes a day</span></div>
         <div class="needs" id="needs">
+          <div class="need hi" id="setup-need"><span class="k"><span class="av av-sm av-tl">AM</span>Setup · Admin manager</span><b>Fill in your 3-minute setup form</b><span class="d">So I can train your team, create your storage and prepare your AI models</span><div class="acts"><a class="btn btn-sm btn-primary" href="#setup">Open form</a></div></div>
           <div class="need hi" data-need="posts"><span class="k"><span class="av av-sm av-mm">MM</span>Approval · Marketing</span><b>3 Instagram posts for the autumn blend</b><span class="d">Ready to schedule for Thu to Sat</span><div class="acts"><a class="btn btn-sm btn-primary" href="#approvals">Review</a><button class="btn btn-sm btn-ghost" data-resolve="posts" data-msg="Posts approved and scheduled">Approve all</button></div></div>
           <div class="need" data-need="vat"><span class="k"><span class="av av-sm av-fm">FM</span>Question · Finance</span><b>Are you VAT registered?</b><span class="d">Needed for October's profit and loss</span><div class="acts"><button class="btn btn-sm btn-ghost" data-resolve="vat" data-msg="Thanks, Finance will close October">Yes</button><button class="btn btn-sm btn-ghost" data-resolve="vat" data-msg="Noted, no VAT applied">No</button><button class="btn btn-sm btn-quiet" data-resolve="vat" data-msg="Finance will help you check">Not sure</button></div></div>
           <div class="need" data-need="pack"><span class="k"><span class="av av-sm av-bc">BC</span>Alert · Consultant</span><b>Packaging cost up 18% this month</b><span class="d">Two cheaper suppliers found, saving about £140 a month</span><div class="acts"><button class="btn btn-sm btn-primary" data-resolve="pack" data-msg="Quote requests sent for approval">See options</button></div></div>
@@ -50,10 +52,11 @@
       <section class="panel" aria-labelledby="team-h">
         <div class="panel-h"><h2 id="team-h">Your team right now</h2><span class="r">Energy refills at midnight, your time</span></div>
         <div class="team">
-          <div class="ecard"><div class="who"><span class="av av-tl">TL</span><div><b>Team lead</b><span>Free</span></div></div><span class="status good live"><span class="dot"></span>Working</span><div class="doing">Writing your 5 pm daily briefing</div><div class="e-lab"><span>Uses no energy</span></div></div>
+          <div class="ecard"><div class="who"><span class="av av-tl">AM</span><div><b>Admin manager</b><span>Free</span></div></div><span class="status good live"><span class="dot"></span>Working</span><div class="doing">Waiting for your setup form, then writing your 5 pm briefing</div><div class="e-lab"><span>Uses no energy</span></div></div>
           <div class="ecard"><div class="who"><span class="av av-fm">FM</span><div><b>Finance manager</b><span>Standard</span></div></div><span class="status warn"><span class="dot"></span>Waiting on you</span><div class="doing">October P&amp;L, needs your VAT answer</div><div><div class="e-lab"><span>Energy</span><span>72 / 100</span></div><div class="energy" style="margin-top:6px"><i style="width:72%"></i></div></div></div>
           <div class="ecard"><div class="who"><span class="av av-mm">MM</span><div><b>Marketing manager</b><span>Standard</span></div></div><span class="status good live"><span class="dot"></span>Working</span><div class="doing">Drafting the November email to subscribers</div><div><div class="e-lab"><span>Energy</span><span>21 / 100</span></div><div class="energy low" style="margin-top:6px"><i style="width:21%"></i></div></div></div>
           <div class="ecard"><div class="who"><span class="av av-bc">BC</span><div><b>Business consultant</b><span>Standard</span></div></div><span class="status"><span class="dot"></span>Idle</span><div class="doing">Finished supplier cost check. Next: weekly review on Monday</div><div><div class="e-lab"><span>Energy</span><span>55 / 100</span></div><div class="energy" style="margin-top:6px"><i style="width:55%"></i></div></div></div>
+          <div class="ecard"><div class="who"><span class="av av-hr">HR</span><div><b>HR manager</b><span>Standard</span></div></div><span class="status good live"><span class="dot"></span>Working</span><div class="doing">Drafting your people basics checklist</div><div><div class="e-lab"><span>Energy</span><span>88 / 100</span></div><div class="energy" style="margin-top:6px"><i style="width:88%"></i></div></div></div>
         </div>
       </section>
 
@@ -130,6 +133,18 @@
       </div>
     </div>
 
+    <!-- SETUP -->
+    <div class="content" data-screen="setup" hidden>
+      <div class="page-h"><div><h1>Setup with your Admin manager</h1><p>Answer once. Your team is trained on it, and every setup step can be undone.</p></div></div>
+      <section class="panel"><div class="panel-h"><h2>Messages from your Admin manager</h2><span class="r" id="setup-via">In your dashboard</span></div>
+        <div class="am-msgs" id="am-msgs"></div></section>
+      <section class="panel" id="setup-form-panel"><div class="panel-h"><h2>Setup form</h2><span class="r" id="setup-count"></span></div>
+        <form class="setup-form" id="setup-form" novalidate></form></section>
+      <section class="panel" id="setup-run" hidden><div class="panel-h"><h2 id="setup-run-h">Setting up your team</h2><span class="r" id="setup-state"></span></div>
+        <ul class="prov" id="setup-steps"></ul>
+        <div class="acts" style="margin-top:16px"><button class="btn btn-ghost btn-sm" id="setup-undo" hidden>Undo setup</button></div></section>
+    </div>
+
     <!-- TEAM -->
     <div class="content" data-screen="team" hidden>
       <div class="page-h"><div><h1>Team</h1><p>Arrows show who hands work to whom.</p></div><button class="btn btn-primary btn-sm" data-toast="Agent store: coming soon">Hire from store</button></div>
@@ -137,11 +152,12 @@
         <div class="org">
           <div class="onode"><div class="who"><span class="av av-me" id="owner-av">AI</span><div><b id="owner-name">You</b><span class="s">Owner</span></div></div></div>
           <div class="vline"></div>
-          <div class="onode"><div class="who"><span class="av av-tl">TL</span><div><b>Team lead</b><span class="s">Routes work, daily briefing</span></div></div></div>
+          <div class="onode"><div class="who"><span class="av av-tl">AM</span><div><b>Admin manager</b><span class="s">Sets up the team, routes work, daily briefing</span></div></div></div>
           <div class="orow">
             <div class="ocol"><div class="onode"><div class="who"><span class="av av-fm">FM</span><div><b>Finance manager</b><span class="s">Standard · 1 workstream</span></div></div><div class="energy"><i style="width:72%"></i></div><span class="xs muted">receives: cost options</span></div></div>
             <div class="ocol"><div class="onode"><div class="who"><span class="av av-mm">MM</span><div><b>Marketing manager</b><span class="s">Standard · 2 workstreams</span></div></div><div class="energy low"><i style="width:21%"></i></div><span class="xs muted">receives: spend advice</span></div></div>
             <div class="ocol"><div class="onode"><div class="who"><span class="av av-bc">BC</span><div><b>Business consultant</b><span class="s">Standard · 1 workstream</span></div></div><div class="energy"><i style="width:55%"></i></div><span class="xs muted">sends to: Finance, Marketing</span></div></div>
+            <div class="ocol"><div class="onode"><div class="who"><span class="av av-hr">HR</span><div><b>HR manager</b><span class="s">Standard · 1 workstream</span></div></div><div class="energy"><i style="width:88%"></i></div><span class="xs muted">receives: hiring budget</span></div></div>
             <div class="ocol"><div class="onode add"><b>+ Add specialist</b><span class="s">Researcher, image generator…</span></div></div>
           </div>
         </div></section>
@@ -179,7 +195,7 @@
     <div class="content" data-screen="usage" hidden>
       <div class="page-h"><div><h1>Usage and wallet</h1><p>Energy is a simple daily allowance. Redoing a task returns it.</p></div></div>
       <div class="grid3">
-        <div class="panel kpi"><span class="l">Plan after trial</span><span class="v">£37/mo</span><span class="dl">3 Standard employees, 15% team discount</span></div>
+        <div class="panel kpi"><span class="l">Plan after trial</span><span class="v">£41/mo</span><span class="dl">4 Standard employees, 15% team discount</span></div>
         <div class="panel kpi"><span class="l">Wallet</span><span class="v">£0.00</span><span class="dl">Top-ups open after the trial</span></div>
         <div class="panel kpi"><span class="l">Monthly spending cap</span><span class="v">£25</span><span class="dl">Auto-refill off</span></div>
       </div>

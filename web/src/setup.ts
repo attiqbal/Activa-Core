@@ -1,0 +1,165 @@
+// Setup screen: Admin manager messages, the setup form and the step-by-step run.
+// The questions, step names and message wording come from the backend's pure
+// modules, so the demo and the real product say exactly the same thing.
+// Until the API is wired in, the run itself is simulated in the browser.
+import { formFor, validateAnswers, type Answers, type FormField } from "../../src/modules/admin-manager/form";
+import { SETUP_STEPS, formInviteText, readyText, welcomeText } from "../../src/modules/admin-manager/messages";
+import { getTemplate } from "../../src/modules/workforce/templates";
+import { toast } from "./common";
+
+const TEAM = ["finance-manager", "marketing-manager", "business-consultant", "hr-manager"];
+const KEY = "vn.setup";
+const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
+const esc = (s: string) => s.replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
+
+type Saved = { state: "awaiting_form" | "ready"; answers?: Answers; messages: { text: string; at: string }[] };
+
+function load(): Saved | undefined {
+  try { return JSON.parse(localStorage.getItem(KEY) ?? "null") ?? undefined; } catch { return undefined; }
+}
+function store(s: Saved): void {
+  try { localStorage.setItem(KEY, JSON.stringify(s)); } catch { /* storage unavailable */ }
+}
+
+function fieldHtml(f: FormField): string {
+  const id = `f-${f.key}`;
+  const label = `<label for="${id}">${esc(f.label)}${f.required ? "" : ' <span class="hint">(optional)</span>'}</label>`;
+  const help = f.help ? `<span class="hint">${esc(f.help)}</span>` : "";
+  let input = "";
+  switch (f.type) {
+    case "longtext":
+      input = `<textarea class="input" id="${id}" name="${f.key}" rows="3"></textarea>`;
+      break;
+    case "choice":
+    case "month":
+      input = `<select class="input" id="${id}" name="${f.key}"><option value="">Choose…</option>${(f.options ?? []).map((o) => `<option>${esc(o)}</option>`).join("")}</select>`;
+      break;
+    case "yesno":
+      input = `<select class="input" id="${id}" name="${f.key}"><option value="">Choose…</option><option value="yes">Yes</option><option value="no">No</option></select>`;
+      break;
+    case "multi":
+      return `<div class="field"><span class="label">${esc(f.label)} <span class="hint">(optional)</span></span><div class="chips" data-multi="${f.key}">${(f.options ?? [])
+        .map((o) => `<button type="button" class="chip" aria-pressed="false">${esc(o)}</button>`)
+        .join("")}</div>${help}</div>`;
+    case "number":
+      input = `<input class="input" id="${id}" name="${f.key}" inputmode="numeric">`;
+      break;
+    default:
+      input = `<input class="input" id="${id}" name="${f.key}">`;
+  }
+  return `<div class="field">${label}${input}${help}<span class="err" data-err="${f.key}" hidden></span></div>`;
+}
+
+function readAnswers(form: HTMLFormElement, fields: FormField[]): Answers {
+  const a: Answers = {};
+  for (const f of fields) {
+    if (f.type === "multi") {
+      a[f.key] = Array.from(form.querySelectorAll<HTMLElement>(`[data-multi="${f.key}"] .chip[aria-pressed="true"]`)).map((c) => c.textContent ?? "");
+      continue;
+    }
+    const el = form.elements.namedItem(f.key) as HTMLInputElement | null;
+    const v = el?.value.trim() ?? "";
+    if (f.type === "yesno") { if (v) a[f.key] = v === "yes"; } else if (v) a[f.key] = v;
+  }
+  return a;
+}
+
+export function initSetup(biz: string, contact: "dashboard" | "slack"): void {
+  const fields = formFor(TEAM);
+  const form = $<HTMLFormElement>("setup-form");
+  let saved = load() ?? {
+    state: "awaiting_form",
+    messages: [
+      { text: welcomeText(biz, TEAM, 7), at: "09:00" },
+      { text: formInviteText(TEAM, "shared"), at: "09:00" },
+    ],
+  };
+  store(saved);
+  $("setup-via").textContent = contact === "slack" ? "Also sent to you in Slack" : "In your dashboard";
+
+  // Group questions: shared ones first, then one group per employee.
+  const groups = new Map<string, FormField[]>();
+  for (const f of fields) groups.set(f.for, [...(groups.get(f.for) ?? []), f]);
+  form.innerHTML =
+    [...groups]
+      .map(([who, fs]) => `<fieldset class="sf-group"><legend>${who === "all" ? "About your business" : `For your ${esc(getTemplate(who)?.title ?? who)}`}</legend>${fs.map(fieldHtml).join("")}</fieldset>`)
+      .join("") + `<div class="ob-actions"><button class="btn btn-primary" type="submit">Send to Admin manager</button></div>`;
+  $("setup-count").textContent = `${fields.length} questions · ${fields.filter((f) => f.required).length} required`;
+
+  form.addEventListener("click", (e) => {
+    const chip = (e.target as HTMLElement).closest<HTMLButtonElement>("[data-multi] .chip");
+    if (chip) chip.setAttribute("aria-pressed", String(chip.getAttribute("aria-pressed") !== "true"));
+  });
+
+  const renderMessages = () => {
+    $("am-msgs").innerHTML = saved.messages
+      .map((m) => `<div class="msg"><span class="av av-sm av-tl">AM</span><div><b>Admin manager</b><span class="t">${esc(m.at)}</span><br>${esc(m.text).replace(/\n/g, "<br>")}</div></div>`)
+      .join("");
+  };
+  const say = (text: string) => {
+    const d = new Date();
+    saved.messages.push({ text, at: `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}` });
+    store(saved);
+    renderMessages();
+  };
+  const setReady = (ready: boolean) => {
+    $("setup-form-panel").toggleAttribute("hidden", ready);
+    $("setup-need").toggleAttribute("hidden", ready);
+    $("setup-badge").toggleAttribute("hidden", ready);
+  };
+  const drawSteps = (status: (i: number) => "" | "run" | "done" | "undone") => {
+    $("setup-steps").innerHTML = SETUP_STEPS.map((s, i) => `<li class="${status(i)}"><span class="pdot"></span>${esc(s.title)}${status(i) === "undone" ? ' <span class="hint">undone</span>' : ""}</li>`).join("");
+  };
+
+  form.addEventListener("submit", (e) => {
+    e.preventDefault();
+    const v = validateAnswers(fields, readAnswers(form, fields));
+    form.querySelectorAll<HTMLElement>("[data-err]").forEach((el) => {
+      const msg = v.errors[el.dataset.err!];
+      el.textContent = msg ?? "";
+      el.toggleAttribute("hidden", !msg);
+    });
+    if (!v.ok) { toast("A couple of answers need a look"); return; }
+    saved.answers = v.clean;
+    say("Thanks, got your answers. Setting up your team now.");
+    $("setup-form-panel").setAttribute("hidden", "");
+    $("setup-run").removeAttribute("hidden");
+    $("setup-run-h").textContent = "Setting up your team";
+    $("setup-undo").setAttribute("hidden", "");
+    let i = 0;
+    const tick = () => {
+      drawSteps((k) => (k < i ? "done" : k === i ? "run" : ""));
+      if (i++ < SETUP_STEPS.length) { window.setTimeout(tick, 650); return; }
+      saved.state = "ready";
+      say(readyText(TEAM));
+      $("setup-state").textContent = "Ready";
+      $("setup-undo").removeAttribute("hidden");
+      setReady(true);
+    };
+    tick();
+  });
+
+  $("setup-undo").addEventListener("click", () => {
+    $("setup-undo").setAttribute("hidden", "");
+    $("setup-run-h").textContent = "Undoing setup";
+    let i = SETUP_STEPS.length - 1;
+    const tick = () => {
+      drawSteps((k) => (k >= i + 1 ? "undone" : "done"));
+      if (i-- >= 0) { window.setTimeout(tick, 400); return; }
+      saved.state = "awaiting_form";
+      say("Done: I undid the setup. Your storage, models and training are removed and your profile is back as it was. Send the form again whenever you're ready.");
+      $("setup-state").textContent = "Undone";
+      setReady(false);
+    };
+    tick();
+  });
+
+  renderMessages();
+  if (saved.state === "ready") {
+    $("setup-run").removeAttribute("hidden");
+    drawSteps(() => "done");
+    $("setup-state").textContent = "Ready";
+    $("setup-undo").removeAttribute("hidden");
+  }
+  setReady(saved.state === "ready");
+}
