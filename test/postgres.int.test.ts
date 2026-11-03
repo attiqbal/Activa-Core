@@ -44,6 +44,10 @@ describe.skipIf(!ADMIN || !APP)("postgres persistence", () => {
     const ask = await a.call("POST", "/api/ask", { text: "Draft a post", employeeId: org.team[1].id }, token);
     expect((ask.body as any).status).toBe("ready_for_review");
 
+    // the Admin manager: welcome is stored, setup runs from the form
+    const answers = { goals: "More subscribers", customers: "Home coffee drinkers" };
+    expect(((await a.call("POST", "/api/setup", { answers }, token)).body as any).state).toBe("ready");
+
     // chat: Slack install stores an encrypted bot token
     const { url } = (await a.call("GET", "/api/slack/install", undefined, token)).body as any;
     expect((await a.call("GET", "/api/slack/callback", undefined, undefined, `code=1&state=${new URL(url).searchParams.get("state")}`)).status).toBe(302);
@@ -52,6 +56,7 @@ describe.skipIf(!ADMIN || !APP)("postgres persistence", () => {
       summary: (await a.call("GET", "/api/finance/summary", undefined, token)).body,
       org: (await a.call("GET", "/api/org", undefined, token)).body,
       audit: a.platform.audit.list(org.id).length,
+      setup: (await a.call("GET", "/api/setup", undefined, token)).body,
     };
     await a.store.flush();
     expect(a.store.healthy).toBe(true);
@@ -71,6 +76,10 @@ describe.skipIf(!ADMIN || !APP)("postgres persistence", () => {
     expect((await b.call("GET", "/api/org", undefined, token)).body).toEqual(before.org);
     expect((await b.call("GET", "/api/finance/summary", undefined, token)).body).toEqual(before.summary);
     expect(b.platform.audit.list(org.id).length).toBe(before.audit);
+    expect((await b.call("GET", "/api/setup", undefined, token)).body).toEqual(before.setup);
+    // setup can still be undone after a restart, and the undone state survives another one
+    const undone = (await b.call("POST", "/api/setup/rollback", undefined, token)).body as any;
+    expect(undone.run.status).toBe("rolled_back");
     expect(b.platform.slackTokens.get("T7")).toBe("xoxb-secret-token");
     expect((await b.call("POST", "/api/signup", { email: "ann@kestrel.co", businessName: "Again" })).status).toBe(409);
     // the Slack person is still linked and gets an answer, and usage records came back

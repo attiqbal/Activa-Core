@@ -61,6 +61,8 @@ export function createPlatform(cfg: PlatformConfig) {
     for (const e of s.employees) workforce.restoreEmployee(e);
     for (const x of s.profiles) workforce.restoreProfile(x.workspaceId, x.profile);
     for (const t of s.training) workforce.restoreTraining(t.employeeId, t.notes);
+    for (const r of s.adminOrgs) admin.restoreOrg(r);
+    for (const m of s.adminMessages) admin.restoreMessage(m);
     for (const x of s.accounts) ledger.restoreAccount(x.workspaceId, x.account);
     for (const e of s.entries) ledger.restoreEntry(e);
     for (const u of s.usage) energy.restoreUsage(u);
@@ -70,7 +72,7 @@ export function createPlatform(cfg: PlatformConfig) {
     for (const l of s.links) router.restoreLink(l.key, l.userId);
     for (const t of s.slackTokens) slackTokens.set(t.team, t.token);
     sink = store;
-    for (const part of [audit, identity, energy, workforce, ledger, router]) part.useSink(store);
+    for (const part of [audit, identity, energy, workforce, ledger, router, admin]) part.useSink(store);
   }
 
   const healthy = () => (sink as { healthy?: boolean } | undefined)?.healthy !== false;

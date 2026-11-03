@@ -4,6 +4,7 @@ import type { Employee, BusinessProfile } from "../modules/workforce/index.js";
 import type { Account, JournalEntry } from "../modules/ledger/index.js";
 import type { EnergyPlan, UsageRecord } from "../modules/energy/index.js";
 import type { Connection } from "../modules/channels/index.js";
+import type { AdminMessage, AdminOrgRecord } from "../modules/admin-manager/index.js";
 
 /**
  * Where services report every change so it can be stored. Services stay fast and
@@ -23,6 +24,8 @@ export interface Sink {
   audit(e: AuditEvent): void;
   connection(c: Connection): void;
   link(workspaceId: string, key: string, userId: string): void;
+  adminOrg(workspaceId: string, record: AdminOrgRecord): void;
+  adminMessage(m: AdminMessage): void;
   slackToken(workspaceId: string, team: string, token: string): void;
 }
 
@@ -40,5 +43,7 @@ export interface Snapshot {
   audit: AuditEvent[];
   connections: Connection[];
   links: { workspaceId: string; key: string; userId: string }[];
+  adminOrgs: AdminOrgRecord[];
+  adminMessages: AdminMessage[];
   slackTokens: { team: string; token: string }[];
 }

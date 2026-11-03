@@ -5,6 +5,7 @@ import type { AuditEvent } from "../modules/audit/index.js";
 import type { Connection } from "../modules/channels/index.js";
 import type { EnergyPlan, UsageRecord } from "../modules/energy/index.js";
 import type { Role, Workspace } from "../modules/identity/index.js";
+import type { AdminMessage, AdminOrgRecord } from "../modules/admin-manager/index.js";
 import type { Account, JournalEntry } from "../modules/ledger/index.js";
 import type { BusinessProfile, Employee } from "../modules/workforce/index.js";
 import { readdirSync, readFileSync } from "node:fs";
@@ -103,11 +104,13 @@ export class PgStore implements Sink {
   }
 
   private state(workspaceId: string, kind: string, id: string, data: unknown): void {
+    // Captured now, so later changes to the object cannot slip into an earlier write.
+    const json = JSON.stringify(data);
     this.scoped(workspaceId, async (c) => {
       await c.query(
         `INSERT INTO state_records(workspace_id, kind, id, data) VALUES ($1,$2,$3,$4)
          ON CONFLICT (workspace_id, kind, id) DO UPDATE SET data = EXCLUDED.data, updated_at = now()`,
-        [workspaceId, kind, id, JSON.stringify(data)],
+        [workspaceId, kind, id, json],
       );
     });
   }
@@ -135,6 +138,12 @@ export class PgStore implements Sink {
   }
   profile(workspaceId: string, p: BusinessProfile): void {
     this.state(workspaceId, "profile", "main", p);
+  }
+  adminOrg(workspaceId: string, r: AdminOrgRecord): void {
+    this.state(workspaceId, "admin_org", "main", r);
+  }
+  adminMessage(m: AdminMessage): void {
+    this.state(m.workspaceId, "admin_msg", m.id, m);
   }
   training(workspaceId: string, employeeId: string, notes: string | undefined): void {
     this.state(workspaceId, "training", employeeId, { notes: notes ?? null });
@@ -189,6 +198,8 @@ export class PgStore implements Sink {
       memberships: (await q("SELECT * FROM memberships")).map((r) => ({ workspaceId: r.workspace_id, userId: r.user_id, role: r.role })),
       employees: (await q("SELECT * FROM employees")).map((r) => ({ id: r.id, workspaceId: r.workspace_id, templateKey: r.template_key, name: r.name })),
       profiles: of("profile").map((s) => ({ workspaceId: s.workspace_id, profile: s.data })),
+      adminOrgs: of("admin_org").map((s) => s.data),
+      adminMessages: of("admin_msg").map((s) => s.data).sort((a, b) => a.at.localeCompare(b.at)),
       training: of("training").filter((s) => s.data.notes !== null).map((s) => ({ workspaceId: s.workspace_id, employeeId: s.id, notes: s.data.notes })),
       accounts: of("account").map((s) => ({ workspaceId: s.workspace_id, account: s.data })),
       entries: (await q("SELECT * FROM journal_entries ORDER BY created_at, id")).map((r) => ({
