@@ -1,4 +1,5 @@
 import { newId, type Id } from "../../core/ids.js";
+import type { Sink } from "../../core/persistence.js";
 import type { AuditLog } from "../audit/index.js";
 import type { IdentityService } from "../identity/index.js";
 
@@ -69,6 +70,24 @@ const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 export class Ledger {
   private accounts = new Map<string, Map<string, Account>>();
   private entries = new Map<string, JournalEntry[]>();
+  private sink?: Sink;
+
+  useSink(sink: Sink): void {
+    this.sink = sink;
+  }
+
+  /** Put back books read from storage (already validated when first written). */
+  restoreAccount(workspaceId: string, a: Account): void {
+    if (!this.accounts.has(workspaceId)) {
+      this.accounts.set(workspaceId, new Map());
+      this.entries.set(workspaceId, []);
+    }
+    this.accounts.get(workspaceId)!.set(a.code, a);
+  }
+
+  restoreEntry(e: JournalEntry): void {
+    this.entries.get(e.workspaceId)?.push(Object.freeze(e));
+  }
 
   constructor(
     private identity: IdentityService,
@@ -81,6 +100,7 @@ export class Ledger {
     if (this.accounts.has(workspaceId)) throw new LedgerError("books already open");
     this.accounts.set(workspaceId, new Map(chart.map((a) => [a.code, { ...a }])));
     this.entries.set(workspaceId, []);
+    for (const a of this.accounts.get(workspaceId)!.values()) this.sink?.account(workspaceId, a);
     this.audit.record({ workspaceId, actor: `user:${userId}`, action: "ledger.opened" });
   }
 
@@ -89,6 +109,7 @@ export class Ledger {
     const accts = this.books(workspaceId);
     if (accts.has(account.code)) throw new LedgerError(`account ${account.code} exists`);
     accts.set(account.code, { ...account });
+    this.sink?.account(workspaceId, account);
   }
 
   chart(userId: string, workspaceId: string): Account[] {
@@ -101,6 +122,15 @@ export class Ledger {
     userId: string,
     workspaceId: string,
     input: { date: string; memo: string; source?: string; lines: JournalLine[] },
+  ): JournalEntry {
+    return this.append(userId, workspaceId, input);
+  }
+
+  private append(
+    userId: string,
+    workspaceId: string,
+    input: { date: string; memo: string; source?: string; lines: JournalLine[] },
+    reverses?: string,
   ): JournalEntry {
     this.identity.require(userId, workspaceId, "task.create");
     const accts = this.books(workspaceId);
@@ -123,9 +153,11 @@ export class Ledger {
       date: input.date,
       memo: input.memo,
       source: input.source,
+      reverses,
       lines: Object.freeze(input.lines.map((l) => Object.freeze({ ...l }))),
     });
     this.entries.get(workspaceId)!.push(entry);
+    this.sink?.entry(entry);
     this.audit.record({ workspaceId, actor: `user:${userId}`, action: "ledger.posted", target: entry.id });
     return entry;
   }
@@ -135,16 +167,17 @@ export class Ledger {
     const original = this.entries.get(workspaceId)?.find((e) => e.id === entryId);
     if (!original) throw new LedgerError("entry not found");
     if (this.entries.get(workspaceId)!.some((e) => e.reverses === entryId)) throw new LedgerError("already reversed");
-    const rev = this.post(userId, workspaceId, {
-      date,
-      memo: `Reversal of: ${original.memo}`,
-      source: original.source,
-      lines: original.lines.map((l) => ({ account: l.account, debit: l.credit, credit: l.debit })),
-    });
-    // post() froze the object; replace it with a copy carrying the link.
-    const list = this.entries.get(workspaceId)!;
-    list[list.length - 1] = Object.freeze({ ...rev, reverses: entryId });
-    return list[list.length - 1]!;
+    return this.append(
+      userId,
+      workspaceId,
+      {
+        date,
+        memo: `Reversal of: ${original.memo}`,
+        source: original.source,
+        lines: original.lines.map((l) => ({ account: l.account, debit: l.credit, credit: l.debit })),
+      },
+      entryId,
+    );
   }
 
   journal(userId: string, workspaceId: string, range?: { from?: string; to?: string }): JournalEntry[] {

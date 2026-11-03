@@ -1,4 +1,5 @@
 import { newId, type Id } from "../../core/ids.js";
+import type { Sink } from "../../core/persistence.js";
 import type { AuditLog } from "../audit/index.js";
 import type { EventBus } from "../../core/events.js";
 import type { IdentityService } from "../identity/index.js";
@@ -46,6 +47,24 @@ export class WorkforceService {
   private employees = new Map<string, Employee>();
   private profiles = new Map<string, BusinessProfile>();
   private tasks = new Map<string, TaskResult>();
+  private sink?: Sink;
+
+  useSink(sink: Sink): void {
+    this.sink = sink;
+  }
+
+  restoreEmployee(e: Employee): void {
+    this.employees.set(e.id, e);
+  }
+
+  restoreTraining(employeeId: string, notes: string): void {
+    this.training.set(employeeId, notes);
+  }
+
+  restoreProfile(workspaceId: string, p: BusinessProfile): void {
+    this.profiles.set(workspaceId, p);
+  }
+
   /** What each employee was taught during setup (from the owner's setup form). */
   private training = new Map<string, string>();
 
@@ -60,6 +79,7 @@ export class WorkforceService {
   setProfile(userId: string, workspaceId: string, profile: BusinessProfile): void {
     this.identity.require(userId, workspaceId, "workspace.manage");
     this.profiles.set(workspaceId, profile);
+    this.sink?.profile(workspaceId, profile);
     this.audit.record({ workspaceId, actor: `user:${userId}`, action: "profile.updated" });
   }
 
@@ -76,6 +96,7 @@ export class WorkforceService {
     if (!employee || employee.workspaceId !== workspaceId) throw new Error("employee not found");
     if (notes === undefined) this.training.delete(employeeId);
     else this.training.set(employeeId, notes);
+    this.sink?.training(workspaceId, employeeId, notes);
     this.audit.record({ workspaceId, actor: `user:${userId}`, action: notes === undefined ? "employee.training_cleared" : "employee.trained", target: employeeId });
   }
 
@@ -97,6 +118,7 @@ export class WorkforceService {
       name: name ?? template.title,
     };
     this.employees.set(employee.id, employee);
+    this.sink?.employee(employee);
     this.audit.record({
       workspaceId,
       actor: `user:${userId}`,

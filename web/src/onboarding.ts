@@ -98,7 +98,7 @@ $("contact").addEventListener("click", (e) => {
 async function createOrganisation(): Promise<void> {
   // Real set-up when the API is running; otherwise the page stays a demo.
   const r = await api<{ token: string }>("/signup", {
-    body: { email: profile.email, businessName: profile.biz, website: profile.site, sells: profile.sells, size: profile.size, goal: profile.goal },
+    body: { email: profile.email, businessName: profile.biz, website: profile.site, sells: profile.sells, size: profile.size, goal: profile.goal, contact: profile.contact },
   });
   if (r.ok && r.data?.token) setToken(r.data.token);
   else if (r.status === 409) $("prov-h").textContent = "You already have an organisation. Opening it";
