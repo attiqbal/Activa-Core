@@ -13,10 +13,16 @@ import { InMemoryModelProvisioner, InMemoryStorageProvisioner } from "../modules
 import { OnboardingService } from "../modules/onboarding/index.js";
 import { WorkforceService } from "../modules/workforce/index.js";
 
+import { ConsoleEmailSender, type EmailSender } from "./email.js";
+
 export interface PlatformConfig {
   anthropicApiKey?: string;
   anthropicModel?: string;
   sessionSecret: string;
+  /** Where sign-in emails come from. Defaults to printing them (development). */
+  email?: EmailSender;
+  /** Public address of the website, used in sign-in links. */
+  appUrl?: string;
   /** Dev-only sign-in by email, no verification. Must stay off in production. */
   allowDevAuth: boolean;
   slack?: { clientId: string; clientSecret: string; signingSecret: string; redirectUri: string };
@@ -77,6 +83,11 @@ export function createPlatform(cfg: PlatformConfig) {
 
   const healthy = () => (sink as { healthy?: boolean } | undefined)?.healthy !== false;
 
-  return { admin, healthy, cfg, now, audit, bus, identity, energy, workforce, ledger, onboarding, router, slackTokens, saveSlackToken, attachStore };
+  const email = cfg.email ?? new ConsoleEmailSender();
+  /** Sign-in links already used. In memory: a restart inside the 15-minute life of a link would allow one reuse. */
+  const usedLinks = new Set<string>();
+  /** Sign-in emails sent per address and hour, to stop the form being used to spam someone. */
+  const sends = new Map<string, number[]>();
+  return { email, usedLinks, sends, admin, healthy, cfg, now, audit, bus, identity, energy, workforce, ledger, onboarding, router, slackTokens, saveSlackToken, attachStore };
 }
 export type Platform = ReturnType<typeof createPlatform>;

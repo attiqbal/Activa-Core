@@ -1,6 +1,7 @@
 import { randomBytes } from "node:crypto";
 import { createServer } from "node:http";
 import { createApp } from "./app.js";
+import { ResendEmailSender } from "./email.js";
 import { createPlatform } from "./platform.js";
 
 const env = process.env;
@@ -8,7 +9,11 @@ const production = env.NODE_ENV === "production";
 if (production && !env.SESSION_SECRET) throw new Error("SESSION_SECRET is required in production");
 if (production && env.ALLOW_DEV_AUTH === "1") throw new Error("ALLOW_DEV_AUTH must not be on in production");
 
+if (production && (!env.RESEND_API_KEY || !env.EMAIL_FROM || !env.APP_URL)) throw new Error("RESEND_API_KEY, EMAIL_FROM and APP_URL are required in production");
+
 const platform = createPlatform({
+  appUrl: env.APP_URL ?? "http://localhost:5173",
+  email: env.RESEND_API_KEY && env.EMAIL_FROM ? new ResendEmailSender(env.RESEND_API_KEY, env.EMAIL_FROM) : undefined,
   anthropicApiKey: env.ANTHROPIC_API_KEY,
   anthropicModel: env.ANTHROPIC_MODEL,
   sessionSecret: env.SESSION_SECRET ?? randomBytes(32).toString("hex"),

@@ -2,6 +2,7 @@ import { createHmac } from "node:crypto";
 import { describe, expect, it } from "vitest";
 import { createApp, makeToken, readToken, type Req } from "../src/server/app.js";
 import { createPlatform } from "../src/server/platform.js";
+import { MemoryEmailSender, ResendEmailSender } from "../src/server/email.js";
 
 const SLACK = { clientId: "cid", clientSecret: "sec", signingSecret: "sign", redirectUri: "https://x/api/slack/callback" };
 function setup(over: Record<string, unknown> = {}) {
@@ -12,11 +13,12 @@ function setup(over: Record<string, unknown> = {}) {
     if (String(url).includes("oauth.v2.access")) return { json: async () => ({ ok: true, access_token: "xoxb-9", team: { id: "T9" }, authed_user: { id: "U9" } }) };
     return { json: async () => ({ ok: true }) };
   }) as any;
-  const platform = createPlatform({ sessionSecret: "s3", allowDevAuth: true, slack: SLACK, now: () => clock.d, http, ...over });
+  const mail = new MemoryEmailSender();
+  const platform = createPlatform({ sessionSecret: "s3", allowDevAuth: true, email: mail, appUrl: "https://app.test", slack: SLACK, now: () => clock.d, http, ...over });
   const handle = createApp(platform);
   const call = (method: string, path: string, body?: unknown, headers: Record<string, string> = {}, query = "") =>
     handle({ method, path, query: new URLSearchParams(query), headers, rawBody: body === undefined ? "" : typeof body === "string" ? body : JSON.stringify(body) } as Req);
-  return { platform, call, clock, calls };
+  return { platform, call, clock, calls, mail };
 }
 async function signedUp() {
   const s = setup();
@@ -49,7 +51,7 @@ describe("signup and org", () => {
     const { call } = await signedUp().then(async (x) => x);
     expect((await call("POST", "/api/signup", { email: "ann@kestrel.co", businessName: "X" })).status).toBe(409);
     expect((await call("POST", "/api/signup", { email: "nope", businessName: "X" })).status).toBe(400);
-    expect((await setup({ allowDevAuth: false }).call("POST", "/api/signup", { email: "a@b.co", businessName: "X" })).status).toBe(503);
+    expect((await setup({ allowDevAuth: false }).call("POST", "/api/signup", { email: "a@b.co", businessName: "X" })).status).toBe(401);
   });
   it("requires a session for everything else", async () => {
     const { call } = setup();
@@ -155,5 +157,65 @@ describe("admin manager", () => {
     await s.call("GET", "/api/slack/callback", undefined, {}, `code=abc&state=${new URL(url).searchParams.get("state")}`);
     expect(((await s.call("GET", "/api/setup", undefined, auth)).body as any).messages.some((m: any) => m.pendingOn)).toBe(false);
     expect(s.calls.filter((c) => c.url.includes("chat.postMessage")).length).toBe(2);
+  });
+});
+
+describe("email sign-in", () => {
+  const tokenIn = (text: string) => /#token=(\S+)/.exec(text)![1]!;
+  const strict = () => setup({ allowDevAuth: false });
+
+  it("sends a link, verifies it once, then signs up with the verified email only", async () => {
+    const s = strict();
+    expect((await s.call("POST", "/api/signup", { email: "ann@k.co", businessName: "K" })).status).toBe(401); // no shortcut
+    expect((await s.call("POST", "/api/signin/start", { email: "Ann@K.co" })).status).toBe(200);
+    expect(s.mail.sent).toHaveLength(1);
+    expect(s.mail.sent[0]!.to).toBe("ann@k.co");
+    expect(s.mail.sent[0]!.text).toContain("https://app.test/signin.html#token=");
+    const link = tokenIn(s.mail.sent[0]!.text);
+    const v = (await s.call("POST", "/api/signin/verify", { token: link })).body as any;
+    expect(v).toMatchObject({ email: "ann@k.co", hasOrganisation: false });
+    expect((await s.call("POST", "/api/signin/verify", { token: link })).status).toBe(400); // single use
+    const auth = { authorization: `Bearer ${v.token}` };
+    // the email in the body is ignored: the verified one wins
+    const r = await s.call("POST", "/api/signup", { email: "someone-else@x.co", businessName: "Kestrel" }, auth);
+    expect(r.status).toBe(201);
+    const again = (await s.call("POST", "/api/signin/start", { email: "ann@k.co" }), tokenIn(s.mail.sent[1]!.text));
+    const v2 = (await s.call("POST", "/api/signin/verify", { token: again })).body as any;
+    expect(v2.hasOrganisation).toBe(true);
+    expect(((await s.call("GET", "/api/org", undefined, { authorization: `Bearer ${v2.token}` })).body as any).name).toBe("Kestrel");
+  });
+
+  it("rejects forged, expired and wrong-kind tokens", async () => {
+    const s = strict();
+    await s.call("POST", "/api/signin/start", { email: "a@b.co" });
+    const link = tokenIn(s.mail.sent[0]!.text);
+    expect((await s.call("POST", "/api/signin/verify", { token: link.replace(/.$/, "x") })).status).toBe(400);
+    s.clock.d = new Date(s.clock.d.getTime() + 16 * 60_000);
+    expect((await s.call("POST", "/api/signin/verify", { token: link })).status).toBe(400);
+    // a sign-in link is not a session
+    expect((await s.call("GET", "/api/org", undefined, { authorization: `Bearer ${link}` })).status).toBe(401);
+  });
+
+  it("a Slack install state token cannot be used as a session", async () => {
+    const s = await signedUp();
+    const { url } = (await s.call("GET", "/api/slack/install", undefined, s.auth)).body as any;
+    const state = new URL(url).searchParams.get("state")!;
+    expect((await s.call("GET", "/api/org", undefined, { authorization: `Bearer ${state}` })).status).toBe(401);
+  });
+
+  it("answers the same for any address, validates it, and limits sends per address", async () => {
+    const s = strict();
+    expect((await s.call("POST", "/api/signin/start", { email: "nope" })).status).toBe(400);
+    for (let i = 0; i < 5; i++) expect((await s.call("POST", "/api/signin/start", { email: "a@b.co" })).status).toBe(200);
+    expect((await s.call("POST", "/api/signin/start", { email: "a@b.co" })).status).toBe(429);
+    expect((await s.call("POST", "/api/signin/start", { email: "other@b.co" })).status).toBe(200);
+  });
+
+  it("the Resend sender posts the message and reports failures", async () => {
+    let seen: any;
+    await new ResendEmailSender("key", "Nafree <hi@x.co>", (async (u: any, i: any) => { seen = { u, i }; return { ok: true }; }) as any).send({ to: "a@b.co", subject: "s", text: "t" });
+    expect(seen.u).toBe("https://api.resend.com/emails");
+    expect(JSON.parse(seen.i.body)).toMatchObject({ from: "Nafree <hi@x.co>", to: ["a@b.co"] });
+    await expect(new ResendEmailSender("k", "f", (async () => ({ ok: false, status: 422 })) as any).send({ to: "a", subject: "s", text: "t" })).rejects.toThrow(/422/);
   });
 });

@@ -1,4 +1,4 @@
-import { createHash, createHmac, timingSafeEqual } from "node:crypto";
+import { createHash, createHmac, randomBytes, timingSafeEqual } from "node:crypto";
 import { SetupError } from "../modules/admin-manager/index.js";
 import { ChannelError, parseSlackEvent } from "../modules/channels/index.js";
 import { PermissionError } from "../modules/identity/index.js";
@@ -54,11 +54,15 @@ const SIZES: Record<string, TeamSize> = { "just me": "solo", solo: "solo", "2–
 
 export function createApp(p: Platform) {
   const secret = p.cfg.sessionSecret;
-  const session = (req: Req): string | undefined => {
+  /** Only tokens issued as sessions count. Other signed tokens (sign-in links, Slack install state) never do. */
+  const sessionClaims = (req: Req) => {
     const h = req.headers["authorization"];
     const t = h?.startsWith("Bearer ") ? h.slice(7) : undefined;
-    return readToken(secret, t, p.now().getTime())?.u;
+    const c = readToken(secret, t, p.now().getTime());
+    return c?.k === "session" ? c : undefined;
   };
+  const session = (req: Req): string | undefined => sessionClaims(req)?.u;
+  const issueSession = (email: string) => makeToken(secret, { k: "session", u: userIdFor(email), e: email }, 7 * 86400, p.now().getTime());
   const orgOf = (userId: string) => p.identity.workspacesFor(userId)[0];
 
   async function route(req: Req): Promise<Res> {
@@ -69,11 +73,41 @@ export function createApp(p: Platform) {
 
     if (method === "GET" && path === "/api/health") return p.healthy() ? json(200, { ok: true }) : json(503, { ok: false, error: "storage is failing" });
 
-    // ---- sign up (dev sign-in: no email verification yet) ----
+    // ---- sign in by email link ----
+    if (method === "POST" && path === "/api/signin/start") {
+      const email = String(body().email ?? "").trim().toLowerCase();
+      if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email) || email.length > 200) throw new BadRequest("a valid email is required");
+      const nowMs = p.now().getTime();
+      const recent = (p.sends.get(email) ?? []).filter((t) => nowMs - t < 3_600_000);
+      if (recent.length >= 5) return json(429, { error: "too many sign-in emails, try again later" });
+      p.sends.set(email, [...recent, nowMs]);
+      const link = makeToken(secret, { k: "magic", e: email, n: randomBytes(12).toString("hex") }, 900, nowMs);
+      const base = (p.cfg.appUrl ?? "").replace(/\/$/, "");
+      // The link opens a page that posts the token back, so mail scanners that pre-open links cannot use it up.
+      await p.email.send({
+        to: email,
+        subject: "Your Virtual Nafree sign-in link",
+        text: `Click to sign in. The link works once and expires in 15 minutes.\n\n${base}/signin.html#token=${link}\n\nIf you didn't ask for this, ignore this email.`,
+      }).catch(() => undefined);
+      // Same answer whether or not the address has an account. In development the website skips the email step.
+      return json(200, p.cfg.allowDevAuth ? { ok: true, dev: true } : { ok: true });
+    }
+    if (method === "POST" && path === "/api/signin/verify") {
+      const c = readToken(secret, String(body().token ?? ""), p.now().getTime());
+      if (!c || c.k !== "magic" || typeof c.e !== "string" || typeof c.n !== "string") return json(400, { error: "this sign-in link is invalid or has expired" });
+      if (p.usedLinks.has(c.n)) return json(400, { error: "this sign-in link was already used" });
+      p.usedLinks.add(c.n);
+      return json(200, { token: issueSession(c.e), email: c.e, hasOrganisation: !!orgOf(userIdFor(c.e)) });
+    }
+
+    // ---- sign up: needs a verified email (or the development shortcut) ----
     if (method === "POST" && path === "/api/signup") {
-      if (!p.cfg.allowDevAuth) return json(503, { error: "sign-in is not configured" });
       const b = body();
-      const email = String(b.email ?? "").trim().toLowerCase();
+      const claims = sessionClaims(req);
+      let email: string;
+      if (claims && typeof claims.e === "string") email = claims.e; // verified by a sign-in link
+      else if (p.cfg.allowDevAuth) email = String(b.email ?? "").trim().toLowerCase(); // development only: no check
+      else return json(401, { error: "verify your email first" });
       if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) throw new BadRequest("a valid email is required");
       const userId = userIdFor(email);
       if (orgOf(userId)) return json(409, { error: "this email already has an organisation" });
@@ -90,7 +124,7 @@ export function createApp(p: Platform) {
       };
       const org = await p.onboarding.signUp(userId, choices);
       await p.admin.welcome(userId, org);
-      const token = makeToken(secret, { u: userId }, 7 * 86400, p.now().getTime());
+      const token = issueSession(email);
       return json(201, { token, workspaceId: org.workspaceId, blueprint: org.blueprint, trialEndsAt: org.trialEndsAt });
     }
 
