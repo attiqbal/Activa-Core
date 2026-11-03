@@ -1,4 +1,5 @@
 import { createHash, createHmac, timingSafeEqual } from "node:crypto";
+import { SetupError } from "../modules/admin-manager/index.js";
 import { ChannelError, parseSlackEvent } from "../modules/channels/index.js";
 import { PermissionError } from "../modules/identity/index.js";
 import { LedgerError } from "../modules/ledger/index.js";
@@ -85,8 +86,10 @@ export function createApp(p: Platform) {
         monthlyVolume: typeof b.monthlyVolume === "number" ? b.monthlyVolume : undefined,
         addOns: Array.isArray(b.addOns) ? b.addOns.map(String) : [],
         prepaidMonths: typeof b.prepaidMonths === "number" ? b.prepaidMonths : undefined,
+        contact: b.contact === "slack" ? "slack" : "dashboard",
       };
       const org = await p.onboarding.signUp(userId, choices);
+      await p.admin.welcome(userId, org);
       const token = makeToken(secret, { u: userId }, 7 * 86400, p.now().getTime());
       return json(201, { token, workspaceId: org.workspaceId, blueprint: org.blueprint, trialEndsAt: org.trialEndsAt });
     }
@@ -124,6 +127,8 @@ export function createApp(p: Platform) {
       p.router.connect(state.u, { workspaceId: org.id, channel: "slack", externalWorkspace: o.team.id, defaultEmployeeId: lead.id }, []);
       p.saveSlackToken(org.id, o.team.id, o.access_token);
       if (o.authed_user?.id) p.router.linkUser(state.u, org.id, "slack", o.team.id, o.authed_user.id);
+      // Anything the Admin manager was holding for Slack goes out now.
+      await p.admin.deliverPending(state.u, org.id).catch(() => 0);
       return { status: 302, headers: { location: "/app.html#team" } };
     }
 
@@ -148,6 +153,21 @@ export function createApp(p: Platform) {
           energyLeft: p.energy.remainingToday(userId, org.id, e.id),
         })),
       });
+    }
+
+    // ---- Admin manager: messages, setup form, setup run ----
+    if (method === "GET" && path === "/api/setup") {
+      return json(200, { ...p.admin.status(userId, org.id), messages: p.admin.messages(userId, org.id) });
+    }
+    if (method === "POST" && path === "/api/setup") {
+      const b = body();
+      if (!b.answers || typeof b.answers !== "object" || Array.isArray(b.answers)) throw new BadRequest("answers are required");
+      const run = await p.admin.submitForm(userId, org.id, b.answers);
+      return json(200, { run, ...p.admin.status(userId, org.id), messages: p.admin.messages(userId, org.id) });
+    }
+    if (method === "POST" && path === "/api/setup/rollback") {
+      const run = await p.admin.rollback(userId, org.id);
+      return json(200, { run, ...p.admin.status(userId, org.id), messages: p.admin.messages(userId, org.id) });
     }
 
     if (method === "POST" && path === "/api/ask") {
@@ -198,7 +218,7 @@ export function createApp(p: Platform) {
     try {
       return await route(req);
     } catch (err) {
-      if (err instanceof BadRequest || err instanceof SignupError || err instanceof LedgerError || err instanceof ChannelError) return json(400, { error: err.message });
+      if (err instanceof BadRequest || err instanceof SetupError || err instanceof SignupError || err instanceof LedgerError || err instanceof ChannelError) return json(400, { error: err.message });
       if (err instanceof PermissionError) return json(403, { error: "you don't have permission to do that" });
       return json(500, { error: "something went wrong" });
     }

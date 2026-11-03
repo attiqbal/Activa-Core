@@ -8,6 +8,8 @@ import { Ledger } from "../modules/ledger/index.js";
 import { AnthropicAdapter } from "../modules/model-gateway/adapters/anthropic.js";
 import { MockAdapter } from "../modules/model-gateway/adapters/mock.js";
 import { ModelGateway } from "../modules/model-gateway/gateway.js";
+import { AdminManager } from "../modules/admin-manager/index.js";
+import { InMemoryModelProvisioner, InMemoryStorageProvisioner } from "../modules/admin-manager/provisioning.js";
 import { OnboardingService } from "../modules/onboarding/index.js";
 import { WorkforceService } from "../modules/workforce/index.js";
 
@@ -36,6 +38,8 @@ export function createPlatform(cfg: PlatformConfig) {
   const ledger = new Ledger(identity, audit);
   const onboarding = new OnboardingService(identity, workforce, ledger, energy, audit, now);
   const router = new ChannelRouter(identity, workforce, audit);
+  /** Welcomes new owners and runs setup. Storage and models are stand-ins until real RunPod/bucket provisioning is wired in. */
+  const admin = new AdminManager(identity, workforce, audit, bus, new InMemoryStorageProvisioner(), new InMemoryModelProvisioner(), router, { now });
   /** Bot tokens by Slack team. Held in memory for now; encrypted storage comes with Postgres wiring. */
   const slackTokens = new Map<string, string>();
   router.register(new SlackChannel((team) => slackTokens.get(team) ?? "", cfg.http));
@@ -71,6 +75,6 @@ export function createPlatform(cfg: PlatformConfig) {
 
   const healthy = () => (sink as { healthy?: boolean } | undefined)?.healthy !== false;
 
-  return { healthy, cfg, now, audit, bus, identity, energy, workforce, ledger, onboarding, router, slackTokens, saveSlackToken, attachStore };
+  return { admin, healthy, cfg, now, audit, bus, identity, energy, workforce, ledger, onboarding, router, slackTokens, saveSlackToken, attachStore };
 }
 export type Platform = ReturnType<typeof createPlatform>;

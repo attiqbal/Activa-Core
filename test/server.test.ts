@@ -118,3 +118,42 @@ describe("slack", () => {
     expect((ch.body as any).challenge).toBe("zz");
   });
 });
+
+describe("admin manager", () => {
+  const answers = { goals: "More subscribers and tidy books", customers: "Home coffee drinkers", tone: "Warm and friendly", financialYearStart: "April", salesTaxRegistered: false, marketingChannels: ["Instagram"], staffCount: 3, hiringSoon: true };
+  it("welcomes a new owner with the team and the setup form", async () => {
+    const { call, auth } = await signedUp();
+    const s = (await call("GET", "/api/setup", undefined, auth)).body as any;
+    expect(s.state).toBe("awaiting_form");
+    expect(s.messages.map((m: any) => m.kind)).toEqual(["welcome", "form"]);
+    expect(s.form.some((f: any) => f.key === "goals" && f.required)).toBe(true);
+  });
+  it("runs setup from the form, then rolls it back on request", async () => {
+    const { call, auth } = await signedUp();
+    const bad = await call("POST", "/api/setup", { answers: { tone: "Warm and friendly" } }, auth);
+    expect(bad.status).toBe(400);
+    const ok = (await call("POST", "/api/setup", { answers }, auth)).body as any;
+    expect(ok.run.status).toBe("completed");
+    expect(ok.state).toBe("ready");
+    expect(ok.messages.at(-1).kind).toBe("ready");
+    expect((await call("POST", "/api/setup", { answers }, auth)).status).toBe(400); // already set up
+    const undone = (await call("POST", "/api/setup/rollback", undefined, auth)).body as any;
+    expect(undone.run.status).toBe("rolled_back");
+    expect(undone.state).toBe("awaiting_form");
+  });
+  it("needs a session", async () => {
+    const { call } = setup();
+    expect((await call("GET", "/api/setup")).status).toBe(401);
+    expect((await call("POST", "/api/setup", { answers: {} })).status).toBe(401);
+  });
+  it("holds the welcome for Slack until Slack is connected, then sends it", async () => {
+    const s = setup();
+    const r = await s.call("POST", "/api/signup", { email: "z@z.co", businessName: "Zed", contact: "slack" });
+    const auth = { authorization: `Bearer ${(r.body as any).token}` };
+    expect(((await s.call("GET", "/api/setup", undefined, auth)).body as any).messages.every((m: any) => m.pendingOn === "slack")).toBe(true);
+    const { url } = (await s.call("GET", "/api/slack/install", undefined, auth)).body as any;
+    await s.call("GET", "/api/slack/callback", undefined, {}, `code=abc&state=${new URL(url).searchParams.get("state")}`);
+    expect(((await s.call("GET", "/api/setup", undefined, auth)).body as any).messages.some((m: any) => m.pendingOn)).toBe(false);
+    expect(s.calls.filter((c) => c.url.includes("chat.postMessage")).length).toBe(2);
+  });
+});
