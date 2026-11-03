@@ -1,6 +1,7 @@
 import "./styles.css";
 import { toast } from "./common";
 import { initSetup } from "./setup";
+import { api, getToken, type Org } from "./api";
 
 const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
 const app = $("app");
@@ -89,14 +90,58 @@ $("a-ok").addEventListener("click", () => resolve(selected, "Approved"));
 $("a-redo").addEventListener("click", () => toast("Redo requested, energy returned"));
 $("a-edit").addEventListener("click", () => toast("Editing opens in the web editor (demo)"));
 
-// Ask bar
-$<HTMLFormElement>("ask").addEventListener("submit", (e) => {
+// Real data: when signed in and the API is running, replace the demo team with the real one.
+let realOrg: Org | undefined;
+const ROLE: Record<string, [string, string]> = { "finance-manager": ["FM", "av-fm"], "marketing-manager": ["MM", "av-mm"], "business-consultant": ["BC", "av-bc"], "hr-manager": ["HR", "av-hr"], "admin-manager": ["AM", "av-tl"] };
+const esc = (s: string) => s.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]!);
+async function loadOrg(): Promise<void> {
+  if (!getToken()) return;
+  const r = await api<Org>("/org");
+  if (!r.ok || !r.data) return;
+  realOrg = r.data;
+  $("org-name").textContent = realOrg.name;
+  $("org-av").textContent = initials(realOrg.name);
+  $("greet").textContent = `${h < 12 ? "Good morning" : h < 18 ? "Good afternoon" : "Good evening"}, ${realOrg.name}`;
+  document.title = `${realOrg.name} · Control center`;
+  const quota = realOrg.dailyQuotaPerEmployee;
+  document.querySelector(".team")!.innerHTML = realOrg.team.map((e) => {
+    const [abbr, cls] = ROLE[e.templateKey] ?? ["AI", "av-tl"];
+    const pct = Math.round((e.energyLeft / quota) * 100);
+    return `<div class="ecard"><div class="who"><span class="av ${cls}">${abbr}</span><div><b>${esc(e.name)}</b><span>Standard</span></div></div><span class="status good"><span class="dot"></span>Ready</span><div class="doing">Waiting for your first request</div><div><div class="e-lab"><span>Energy</span><span>${e.energyLeft} / ${quota}</span></div><div class="energy${pct < 25 ? " low" : ""}" style="margin-top:6px"><i style="width:${pct}%"></i></div></div></div>`;
+  }).join("");
+  if (realOrg.trialEndsAt) toast(`Free trial until ${new Date(realOrg.trialEndsAt).toLocaleDateString()}`);
+}
+void loadOrg();
+
+// Ask bar: "finance: ..." / "marketing: ..." / "consultant: ..." / "hr: ..." picks the employee; otherwise the consultant answers.
+$<HTMLFormElement>("ask").addEventListener("submit", async (e) => {
   e.preventDefault();
   const input = $<HTMLInputElement>("ask-in");
-  if (!input.value.trim()) return;
-  toast("Admin manager got it and will route it (demo)");
+  const text = input.value.trim();
+  if (!text) return;
+  if (!realOrg) { toast("Admin manager got it and will route it (demo)"); input.value = ""; return; }
+  const m = /^(finance|marketing|consultant|hr)\s*[:,-]\s*(.+)$/is.exec(text);
+  const key = m ? { finance: "finance-manager", marketing: "marketing-manager", consultant: "business-consultant", hr: "hr-manager" }[m[1]!.toLowerCase() as "finance"] : "business-consultant";
+  const emp = realOrg.team.find((x) => x.templateKey === key) ?? realOrg.team[0]!;
+  toast(`${emp.name} is on it…`);
+  const r = await api<{ status: string; reason?: string; answer?: string }>("/ask", { body: { text: m ? m[2] : text, employeeId: emp.id } });
   input.value = "";
+  if (!r.ok || !r.data) { toast("Could not reach your team. Try again."); return; }
+  if (r.data.status === "no_energy") { toast(r.data.reason === "trial_ended" ? "Your free trial has ended" : `${emp.name} has used today's energy`); return; }
+  showAnswer(emp.name, r.data.answer ?? "");
+  void loadOrg();
 });
+
+function showAnswer(who: string, text: string): void {
+  let box = document.getElementById("answer");
+  if (!box) {
+    box = document.createElement("section");
+    box.id = "answer"; box.className = "panel";
+    document.querySelector('[data-screen="home"]')?.prepend(box);
+  }
+  box.innerHTML = `<div class="panel-h"><h2>${esc(who)} says</h2><span class="r">Draft for you to review</span></div><div class="preview" style="white-space:pre-wrap">${esc(text)}</div>`;
+  window.scrollTo({ top: 0, behavior: "smooth" });
+}
 document.addEventListener("keydown", (e) => {
   const tag = (e.target as HTMLElement).tagName;
   if (e.key === "/" && tag !== "INPUT" && tag !== "TEXTAREA") { e.preventDefault(); $("ask-in").focus(); }

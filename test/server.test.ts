@@ -1,0 +1,120 @@
+import { createHmac } from "node:crypto";
+import { describe, expect, it } from "vitest";
+import { createApp, makeToken, readToken, type Req } from "../src/server/app.js";
+import { createPlatform } from "../src/server/platform.js";
+
+const SLACK = { clientId: "cid", clientSecret: "sec", signingSecret: "sign", redirectUri: "https://x/api/slack/callback" };
+function setup(over: Record<string, unknown> = {}) {
+  const clock = { d: new Date("2026-06-10T10:00:00Z") };
+  const calls: any[] = [];
+  const http = (async (url: any, init: any) => {
+    calls.push({ url: String(url), init });
+    if (String(url).includes("oauth.v2.access")) return { json: async () => ({ ok: true, access_token: "xoxb-9", team: { id: "T9" }, authed_user: { id: "U9" } }) };
+    return { json: async () => ({ ok: true }) };
+  }) as any;
+  const platform = createPlatform({ sessionSecret: "s3", allowDevAuth: true, slack: SLACK, now: () => clock.d, http, ...over });
+  const handle = createApp(platform);
+  const call = (method: string, path: string, body?: unknown, headers: Record<string, string> = {}, query = "") =>
+    handle({ method, path, query: new URLSearchParams(query), headers, rawBody: body === undefined ? "" : typeof body === "string" ? body : JSON.stringify(body) } as Req);
+  return { platform, call, clock, calls };
+}
+async function signedUp() {
+  const s = setup();
+  const r = await s.call("POST", "/api/signup", { email: "Ann@Kestrel.co", businessName: "Kestrel Coffee", sells: "Specialty coffee", size: "2–10", country: "GB", goal: "More customers" });
+  const { token } = r.body as any;
+  return { ...s, r, auth: { authorization: `Bearer ${token}` } };
+}
+
+describe("tokens", () => {
+  it("reject tampering and expiry", () => {
+    const t = makeToken("k", { u: "a" }, 60, 0);
+    expect(readToken("k", t, 1000)?.u).toBe("a");
+    expect(readToken("k", t, 61_000)).toBeUndefined();
+    expect(readToken("other", t, 1000)).toBeUndefined();
+    expect(readToken("k", t.replace(/^./, "x"), 1000)).toBeUndefined();
+  });
+});
+
+describe("signup and org", () => {
+  it("creates an organisation and returns the team with energy left", async () => {
+    const { r, call, auth } = await signedUp();
+    expect(r.status).toBe(201);
+    expect((r.body as any).trialEndsAt).toBe("2026-06-17T10:00:00.000Z");
+    const org = (await call("GET", "/api/org", undefined, auth)).body as any;
+    expect(org.name).toBe("Kestrel Coffee");
+    expect(org.team.map((e: any) => e.templateKey)).toEqual(["admin-manager", "finance-manager", "marketing-manager", "business-consultant", "hr-manager"]);
+    expect(org.team[0].energyLeft).toBe(300);
+  });
+  it("refuses a second signup for the same email, bad emails, and unconfigured dev auth", async () => {
+    const { call } = await signedUp().then(async (x) => x);
+    expect((await call("POST", "/api/signup", { email: "ann@kestrel.co", businessName: "X" })).status).toBe(409);
+    expect((await call("POST", "/api/signup", { email: "nope", businessName: "X" })).status).toBe(400);
+    expect((await setup({ allowDevAuth: false }).call("POST", "/api/signup", { email: "a@b.co", businessName: "X" })).status).toBe(503);
+  });
+  it("requires a session for everything else", async () => {
+    const { call } = setup();
+    expect((await call("GET", "/api/org")).status).toBe(401);
+    expect((await call("GET", "/api/org", undefined, { authorization: "Bearer junk" })).status).toBe(401);
+  });
+  it("keeps customers apart", async () => {
+    const a = await signedUp();
+    const r2 = await a.call("POST", "/api/signup", { email: "bob@other.co", businessName: "Other" });
+    const bobAuth = { authorization: `Bearer ${(r2.body as any).token}` };
+    const bobOrg = (await a.call("GET", "/api/org", undefined, bobAuth)).body as any;
+    const annOrg = (await a.call("GET", "/api/org", undefined, a.auth)).body as any;
+    expect(bobOrg.name).toBe("Other");
+    // Bob cannot ask Ann's employee
+    const res = await a.call("POST", "/api/ask", { text: "hi", employeeId: annOrg.team[0].id }, bobAuth);
+    expect(res.status).toBe(400);
+  });
+});
+
+describe("ask and finance", () => {
+  it("asks an employee and spends energy accounting", async () => {
+    const { call, auth } = await signedUp();
+    const org = (await call("GET", "/api/org", undefined, auth)).body as any;
+    const r = await call("POST", "/api/ask", { text: "Draft a post", employeeId: org.team[1].id }, auth);
+    expect(r.status).toBe(200);
+    expect((r.body as any).status).toBe("ready_for_review");
+    expect((await call("POST", "/api/ask", { text: "", employeeId: org.team[1].id }, auth)).status).toBe(400);
+  });
+  it("posts an entry and reports profit and loss", async () => {
+    const { call, auth } = await signedUp();
+    const bad = await call("POST", "/api/finance/entries", { date: "2026-06-02", memo: "x", lines: [{ account: "1000", debit: 5, credit: 0 }, { account: "4000", debit: 0, credit: 4 }] }, auth);
+    expect(bad.status).toBe(400);
+    const ok = await call("POST", "/api/finance/entries", { date: "2026-06-02", memo: "Sale", lines: [{ account: "1000", debit: 9000, credit: 0 }, { account: "4000", debit: 0, credit: 9000 }] }, auth);
+    expect(ok.status).toBe(201);
+    const s = (await call("GET", "/api/finance/summary", undefined, auth)).body as any;
+    expect(s.profitAndLoss.netProfit).toBe(9000);
+  });
+});
+
+describe("slack", () => {
+  const sign = (secret: string, ts: number, body: string) => `v0=${createHmac("sha256", secret).update(`v0:${ts}:${body}`).digest("hex")}`;
+  it("install link carries a signed state; callback connects, stores token, links installer", async () => {
+    const { call, auth, platform } = await signedUp();
+    const { url } = (await call("GET", "/api/slack/install", undefined, auth)).body as any;
+    const u = new URL(url);
+    expect(u.searchParams.get("client_id")).toBe("cid");
+    const state = u.searchParams.get("state")!;
+    const cb = await call("GET", "/api/slack/callback", undefined, {}, `code=abc&state=${state}`);
+    expect(cb.status).toBe(302);
+    expect(platform.slackTokens.get("T9")).toBe("xoxb-9");
+    expect((await call("GET", "/api/slack/callback", undefined, {}, "code=abc&state=forged")).status).toBe(400);
+  });
+  it("answers Slack events only when signed, and replies in the chat afterwards", async () => {
+    const { call, auth, calls, clock } = await signedUp();
+    const { url } = (await call("GET", "/api/slack/install", undefined, auth)).body as any;
+    await call("GET", "/api/slack/callback", undefined, {}, `code=abc&state=${new URL(url).searchParams.get("state")}`);
+    const ts = Math.floor(clock.d.getTime() / 1000);
+    const body = JSON.stringify({ type: "event_callback", team_id: "T9", event_id: "Ev1", event: { type: "message", channel_type: "im", user: "U9", channel: "D9", text: "finance: runway?" } });
+    const bad = await call("POST", "/api/slack/events", body, { "x-slack-request-timestamp": String(ts), "x-slack-signature": "v0=bad" });
+    expect(bad.status).toBe(401);
+    const good = await call("POST", "/api/slack/events", body, { "x-slack-request-timestamp": String(ts), "x-slack-signature": sign("sign", ts, body) });
+    expect(good.status).toBe(200);
+    await good.after!();
+    expect(calls.some((c) => c.url.includes("chat.postMessage") && c.init.headers.authorization === "Bearer xoxb-9")).toBe(true);
+    const ch = await call("POST", "/api/slack/events", JSON.stringify({ type: "url_verification", challenge: "zz" }), { "x-slack-request-timestamp": String(ts), "x-slack-signature": sign("sign", ts, JSON.stringify({ type: "url_verification", challenge: "zz" })) });
+    expect((ch.body as any).challenge).toBe("zz");
+  });
+});

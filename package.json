@@ -8,11 +8,13 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "check": "npm run typecheck && npm test",
-    "db:test": "bash db/isolation-test.sh"
+    "db:test": "bash db/isolation-test.sh",
+    "dev:api": "ALLOW_DEV_AUTH=1 tsx src/server/main.ts"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",
     "typescript": "^5.6.0",
-    "vitest": "^2.1.0"
+    "vitest": "^2.1.0",
+    "tsx": "^4.19.0"
   }
 }
