@@ -1,5 +1,6 @@
 import "./styles.css";
 import { drawPseudoQr } from "./common";
+import { api, setToken } from "./api";
 
 const TOTAL = 6;
 const KEY = "vn.profile";
@@ -76,7 +77,10 @@ $("goal").addEventListener("click", (e) => {
 });
 
 // Step 5
-$("slack-sim").addEventListener("click", () => {
+$("slack-sim").addEventListener("click", async () => {
+  // With the API and a Slack app configured this opens Slack's real install page.
+  const r = await api<{ url: string }>("/slack/install");
+  if (r.ok && r.data?.url) { window.location.href = r.data.url; return; }
   profile.slack = true; save();
   $("slack-ds").textContent = `Connected to ${profile.biz ?? "your"} workspace`;
   $("slack-sim").setAttribute("hidden", "");
@@ -84,7 +88,17 @@ $("slack-sim").addEventListener("click", () => {
 });
 
 // Step 6
+async function createOrganisation(): Promise<void> {
+  // Real set-up when the API is running; otherwise the page stays a demo.
+  const r = await api<{ token: string }>("/signup", {
+    body: { email: profile.email, businessName: profile.biz, website: profile.site, sells: profile.sells, size: profile.size, goal: profile.goal },
+  });
+  if (r.ok && r.data?.token) setToken(r.data.token);
+  else if (r.status === 409) $("prov-h").textContent = "You already have an organisation. Opening it";
+}
+
 function provision(): void {
+  void createOrganisation();
   $("prov-h").textContent = `Setting up ${profile.biz ?? "your company"}`;
   const items = Array.from(document.querySelectorAll<HTMLElement>("#prov li"));
   items.forEach((li) => li.classList.remove("run", "done"));
