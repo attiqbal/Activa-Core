@@ -14,6 +14,8 @@ export interface Sink {
   membership(workspaceId: string, userId: string, role: Role): void;
   employee(e: Employee): void;
   profile(workspaceId: string, p: BusinessProfile): void;
+  /** notes undefined means the training was cleared. */
+  training(workspaceId: string, employeeId: string, notes: string | undefined): void;
   account(workspaceId: string, a: Account): void;
   entry(e: JournalEntry): void;
   usage(u: UsageRecord): void;
@@ -30,6 +32,7 @@ export interface Snapshot {
   memberships: { workspaceId: string; userId: string; role: Role }[];
   employees: Employee[];
   profiles: { workspaceId: string; profile: BusinessProfile }[];
+  training: { workspaceId: string; employeeId: string; notes: string }[];
   accounts: { workspaceId: string; account: Account }[];
   entries: JournalEntry[];
   usage: UsageRecord[];

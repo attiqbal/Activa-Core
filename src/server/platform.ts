@@ -56,6 +56,7 @@ export function createPlatform(cfg: PlatformConfig) {
     for (const m of s.memberships) identity.restoreMember(m.workspaceId, m.userId, m.role);
     for (const e of s.employees) workforce.restoreEmployee(e);
     for (const x of s.profiles) workforce.restoreProfile(x.workspaceId, x.profile);
+    for (const t of s.training) workforce.restoreTraining(t.employeeId, t.notes);
     for (const x of s.accounts) ledger.restoreAccount(x.workspaceId, x.account);
     for (const e of s.entries) ledger.restoreEntry(e);
     for (const u of s.usage) energy.restoreUsage(u);

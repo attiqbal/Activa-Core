@@ -136,6 +136,9 @@ export class PgStore implements Sink {
   profile(workspaceId: string, p: BusinessProfile): void {
     this.state(workspaceId, "profile", "main", p);
   }
+  training(workspaceId: string, employeeId: string, notes: string | undefined): void {
+    this.state(workspaceId, "training", employeeId, { notes: notes ?? null });
+  }
   account(workspaceId: string, a: Account): void {
     this.state(workspaceId, "account", a.code, a);
   }
@@ -186,6 +189,7 @@ export class PgStore implements Sink {
       memberships: (await q("SELECT * FROM memberships")).map((r) => ({ workspaceId: r.workspace_id, userId: r.user_id, role: r.role })),
       employees: (await q("SELECT * FROM employees")).map((r) => ({ id: r.id, workspaceId: r.workspace_id, templateKey: r.template_key, name: r.name })),
       profiles: of("profile").map((s) => ({ workspaceId: s.workspace_id, profile: s.data })),
+      training: of("training").filter((s) => s.data.notes !== null).map((s) => ({ workspaceId: s.workspace_id, employeeId: s.id, notes: s.data.notes })),
       accounts: of("account").map((s) => ({ workspaceId: s.workspace_id, account: s.data })),
       entries: (await q("SELECT * FROM journal_entries ORDER BY created_at, id")).map((r) => ({
         id: r.id, workspaceId: r.workspace_id, date: r.entry_date, memo: r.memo, source: r.source ?? undefined, reverses: r.reverses ?? undefined, lines: byEntry.get(r.id) ?? [],

@@ -57,9 +57,16 @@ export class WorkforceService {
     this.employees.set(e.id, e);
   }
 
+  restoreTraining(employeeId: string, notes: string): void {
+    this.training.set(employeeId, notes);
+  }
+
   restoreProfile(workspaceId: string, p: BusinessProfile): void {
     this.profiles.set(workspaceId, p);
   }
+
+  /** What each employee was taught during setup (from the owner's setup form). */
+  private training = new Map<string, string>();
 
   constructor(
     private identity: IdentityService,
@@ -74,6 +81,30 @@ export class WorkforceService {
     this.profiles.set(workspaceId, profile);
     this.sink?.profile(workspaceId, profile);
     this.audit.record({ workspaceId, actor: `user:${userId}`, action: "profile.updated" });
+  }
+
+  profileOf(userId: string, workspaceId: string): BusinessProfile | undefined {
+    this.identity.require(userId, workspaceId, "task.read");
+    const p = this.profiles.get(workspaceId);
+    return p ? { ...p } : undefined;
+  }
+
+  /** Teaches an employee about this business. Replaces earlier training; undefined clears it. */
+  train(userId: string, workspaceId: string, employeeId: string, notes: string | undefined): void {
+    this.identity.require(userId, workspaceId, "workspace.manage");
+    const employee = this.employees.get(employeeId);
+    if (!employee || employee.workspaceId !== workspaceId) throw new Error("employee not found");
+    if (notes === undefined) this.training.delete(employeeId);
+    else this.training.set(employeeId, notes);
+    this.sink?.training(workspaceId, employeeId, notes);
+    this.audit.record({ workspaceId, actor: `user:${userId}`, action: notes === undefined ? "employee.training_cleared" : "employee.trained", target: employeeId });
+  }
+
+  trainingOf(userId: string, workspaceId: string, employeeId: string): string | undefined {
+    this.identity.require(userId, workspaceId, "task.read");
+    const employee = this.employees.get(employeeId);
+    if (!employee || employee.workspaceId !== workspaceId) throw new Error("employee not found");
+    return this.training.get(employeeId);
   }
 
   async hire(userId: string, workspaceId: string, templateKey: string, name?: string): Promise<Employee> {
@@ -120,6 +151,8 @@ export class WorkforceService {
     ];
     // The Finance manager keeps books to the owner's country rules (or a safe generic set).
     if (template.key === "finance-manager") parts.push(describePack(packFor(profile?.country)));
+    const training = this.training.get(employeeId);
+    if (training) parts.push(`What the owner told you during setup:\n${training}`);
     const system = parts.join("\n\n");
 
     // The employee only starts work if there is energy left (or paid overtime).

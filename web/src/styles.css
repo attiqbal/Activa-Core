@@ -165,6 +165,7 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .av-mm { background: linear-gradient(135deg, #5b3fd6, #8a5cf5); }
 .av-bc { background: linear-gradient(135deg, #a8327f, #e05aa8); }
 .av-tl { background: #1b2742; }
+.av-hr { background: linear-gradient(135deg, #0f7a6c, #2bb59a); }
 .av-me { background: var(--color-slate); }
 
 /* ---------- Energy bar ---------- */
@@ -315,7 +316,8 @@ button { font: inherit; color: inherit; cursor: pointer; }
 @media (max-width: 880px) { .steps { grid-template-columns: 1fr; } }
 
 /* Employees */
-.emps { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+.emps { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; }
+@media (max-width: 1200px) { .emps { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 .emp-card { display: flex; flex-direction: column; gap: 18px; }
 .emp-head { display: flex; align-items: center; gap: 14px; }
 .emp-head .av { width: 44px; height: 44px; border-radius: 12px; font-size: 13px; }
@@ -501,7 +503,7 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .need.gone { opacity: 0; transform: scale(.97); }
 .all-clear { text-align: center; padding: 24px; color: var(--color-mist); font-size: 15px; }
 
-.team { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+.team { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 12px; }
 .ecard { background: var(--color-abyss); border: 1px solid var(--color-inkline); border-radius: 10px; padding: 16px; display: flex; flex-direction: column; gap: 10px; }
 .ecard .who { display: flex; align-items: center; gap: 12px; }
 .ecard .who b { font-weight: 500; font-size: 14.5px; display: block; line-height: 1.25; }
@@ -595,3 +597,15 @@ button { font: inherit; color: inherit; cursor: pointer; }
   .team { grid-template-columns: 1fr; }
   .page-h h1 { font-size: 26px; }
 }
+
+/* ---------- Setup with the Admin manager ---------- */
+.am-msgs { display: flex; flex-direction: column; gap: 14px; }
+.am-msgs .msg { display: grid; grid-template-columns: 26px 1fr; gap: 12px; font-size: 14.5px; color: var(--color-mist); line-height: 1.55; }
+.am-msgs .msg b { color: #fff; font-weight: 500; margin-right: 8px; }
+.am-msgs .msg .t { font-size: 12px; color: var(--color-ash); }
+.setup-form { display: flex; flex-direction: column; gap: 22px; }
+.sf-group { border: 1px solid var(--color-inkline); border-radius: 10px; padding: 16px; margin: 0; display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+.sf-group legend { padding: 0 6px; font-size: 13px; color: #fff; font-weight: 500; }
+textarea.input { resize: vertical; min-height: 72px; font-family: inherit; }
+select.input { appearance: auto; }
+.prov li.undone { color: var(--color-ash); text-decoration: line-through; }

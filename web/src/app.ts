@@ -1,12 +1,13 @@
 import "./styles.css";
 import { toast } from "./common";
+import { initSetup } from "./setup";
 import { api, getToken, type Org } from "./api";
 
 const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
 const app = $("app");
 
 // Profile from onboarding (falls back to the example business).
-let profile: { biz?: string; email?: string; slack?: boolean } = {};
+let profile: { biz?: string; email?: string; slack?: boolean; contact?: string } = {};
 try { profile = JSON.parse(localStorage.getItem("vn.profile") ?? "{}"); } catch { /* ignore */ }
 const biz = profile.biz || "Kestrel Coffee";
 const initials = (s: string) => s.split(/\s+/).filter(Boolean).slice(0, 2).map((w) => w[0]!.toUpperCase()).join("") || "VN";
@@ -91,7 +92,7 @@ $("a-edit").addEventListener("click", () => toast("Editing opens in the web edit
 
 // Real data: when signed in and the API is running, replace the demo team with the real one.
 let realOrg: Org | undefined;
-const ROLE: Record<string, [string, string]> = { "finance-manager": ["FM", "av-fm"], "marketing-manager": ["MM", "av-mm"], "business-consultant": ["BC", "av-bc"] };
+const ROLE: Record<string, [string, string]> = { "finance-manager": ["FM", "av-fm"], "marketing-manager": ["MM", "av-mm"], "business-consultant": ["BC", "av-bc"], "hr-manager": ["HR", "av-hr"], "admin-manager": ["AM", "av-tl"] };
 const esc = (s: string) => s.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]!);
 async function loadOrg(): Promise<void> {
   if (!getToken()) return;
@@ -112,15 +113,15 @@ async function loadOrg(): Promise<void> {
 }
 void loadOrg();
 
-// Ask bar: "finance: ..." / "marketing: ..." / "consultant: ..." picks the employee; otherwise the consultant answers.
+// Ask bar: "finance: ..." / "marketing: ..." / "consultant: ..." / "hr: ..." picks the employee; otherwise the consultant answers.
 $<HTMLFormElement>("ask").addEventListener("submit", async (e) => {
   e.preventDefault();
   const input = $<HTMLInputElement>("ask-in");
   const text = input.value.trim();
   if (!text) return;
-  if (!realOrg) { toast("Team lead got it and will route it (demo)"); input.value = ""; return; }
-  const m = /^(finance|marketing|consultant)\s*[:,-]\s*(.+)$/is.exec(text);
-  const key = m ? { finance: "finance-manager", marketing: "marketing-manager", consultant: "business-consultant" }[m[1]!.toLowerCase() as "finance"] : "business-consultant";
+  if (!realOrg) { toast("Admin manager got it and will route it (demo)"); input.value = ""; return; }
+  const m = /^(finance|marketing|consultant|hr)\s*[:,-]\s*(.+)$/is.exec(text);
+  const key = m ? { finance: "finance-manager", marketing: "marketing-manager", consultant: "business-consultant", hr: "hr-manager" }[m[1]!.toLowerCase() as "finance"] : "business-consultant";
   const emp = realOrg.team.find((x) => x.templateKey === key) ?? realOrg.team[0]!;
   toast(`${emp.name} is on it…`);
   const r = await api<{ status: string; reason?: string; answer?: string }>("/ask", { body: { text: m ? m[2] : text, employeeId: emp.id } });
@@ -175,4 +176,5 @@ function drawBars(): void {
 }
 
 refresh();
+initSetup(biz, profile.contact === "slack" ? "slack" : "dashboard");
 route();

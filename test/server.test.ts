@@ -42,7 +42,7 @@ describe("signup and org", () => {
     expect((r.body as any).trialEndsAt).toBe("2026-06-17T10:00:00.000Z");
     const org = (await call("GET", "/api/org", undefined, auth)).body as any;
     expect(org.name).toBe("Kestrel Coffee");
-    expect(org.team.map((e: any) => e.templateKey)).toEqual(["finance-manager", "marketing-manager", "business-consultant"]);
+    expect(org.team.map((e: any) => e.templateKey)).toEqual(["admin-manager", "finance-manager", "marketing-manager", "business-consultant", "hr-manager"]);
     expect(org.team[0].energyLeft).toBe(300);
   });
   it("refuses a second signup for the same email, bad emails, and unconfigured dev auth", async () => {
