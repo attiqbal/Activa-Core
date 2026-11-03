@@ -23,7 +23,7 @@
   <!-- 1 Sign in -->
   <section class="ob-card" data-step="1">
     <h1>Hire your AI team in three minutes</h1>
-    <p class="sub">Finance, marketing and a business consultant who know your business. Free for 7 days, no card.</p>
+    <p class="sub">Finance, marketing, HR and a business consultant who know your business. Free for 7 days, no card.</p>
     <div class="ob-panel">
       <button class="btn btn-provider btn-block" data-next>
         <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="#4285f4" d="M21.6 12.2c0-.7-.1-1.3-.2-1.9H12v3.6h5.4a4.6 4.6 0 01-2 3v2.5h3.2c1.9-1.7 3-4.3 3-7.200z"/><path fill="#34a853" d="M12 22c2.7 0 5-.9 6.6-2.500l-3.2-2.500c-.9.6-2 1-3.4 1-2.6 0-4.8-1.8-5.6-4.100H3.100v2.600A10 10 0 0012 22z"/><path fill="#fbbc05" d="M6.4 13.900a6 6 0 010-3.800V7.500H3.100a10 10 0 000 9z"/><path fill="#ea4335" d="M12 6c1.5 0 2.8.5 3.8 1.500l2.9-2.900A10 10 0 003.1 7.500l3.3 2.600C7.2 7.8 9.4 6 12 6z"/></svg>
@@ -82,11 +82,12 @@
     <h1>Your team is ready to start</h1>
     <p class="sub">Each employee has a first useful job lined up.</p>
     <div class="ob-panel">
-      <div class="team-row"><span class="av av-tl">TL</span><div><b>Team lead</b> <span class="first">· free, runs the team</span></div></div>
+      <div class="team-row"><span class="av av-tl">AM</span><div><b>Admin manager</b> <span class="first">· free, sets up and runs the team</span></div></div>
       <div class="team-row"><span class="av av-fm">FM</span><div><b>Finance manager</b><div class="first">First: cash snapshot</div><div class="energy"><i style="width:100%"></i></div></div></div>
       <div class="team-row"><span class="av av-mm">MM</span><div><b>Marketing manager</b><div class="first">First: 30-day plan</div><div class="energy"><i style="width:100%"></i></div></div></div>
       <div class="team-row"><span class="av av-bc">BC</span><div><b>Business consultant</b><div class="first">First: cost check</div><div class="energy"><i style="width:100%"></i></div></div></div>
-      <p class="small muted">Free for 7 days with full energy. After that <span class="mono" style="color:#fff">£37/mo</span> for this team, changeable any time.</p>
+      <div class="team-row"><span class="av av-hr">HR</span><div><b>HR manager</b><div class="first">First: people basics checklist</div><div class="energy"><i style="width:100%"></i></div></div></div>
+      <p class="small muted">Free for 7 days with full energy. After that <span class="mono" style="color:#fff">£41/mo</span> for this team, changeable any time.</p>
       <div class="ob-actions"><button class="btn btn-ghost" data-back>Back</button><button class="btn btn-primary" data-next>Start my team</button></div>
     </div>
   </section>
@@ -105,6 +106,10 @@
         <div class="app-row" style="opacity:.55"><span class="lg" style="font-weight:600">T</span><div><div class="nm">Microsoft Teams</div><div class="ds">Coming soon</div></div><span class="badge badge-dark">Soon</span></div>
         <div class="app-row" style="opacity:.55"><span class="lg" style="font-weight:600">W</span><div><div class="nm">WhatsApp</div><div class="ds">Coming soon</div></div><span class="badge badge-dark">Soon</span></div>
       </div>
+      <div class="field"><span class="label" id="contact-l">Where should your Admin manager message you?</span>
+        <div class="chips" role="group" aria-labelledby="contact-l" id="contact">
+          <button class="chip" aria-pressed="true" data-v="dashboard">My dashboard</button><button class="chip" aria-pressed="false" data-v="slack">Slack</button>
+        </div><span class="hint">It will introduce your team and send a short setup form. If Slack is not connected yet, the messages wait in your dashboard and follow you to Slack once it is.</span></div>
       <div class="learn"><b>No phone handy?</b>Use this computer instead, or send the link to your admin. Everything also works in the web app with a daily email briefing.</div>
       <div class="ob-actions"><button class="btn btn-ghost" data-back>Back</button><button class="btn btn-primary" id="connect-go" data-next>Do this later</button></div>
     </div>
@@ -115,13 +120,12 @@
     <h1 id="prov-h">Setting up your company</h1>
     <div class="ob-panel">
       <ul class="prov" id="prov">
-        <li><span class="pdot"></span>Private workspace and storage created</li>
-        <li><span class="pdot"></span>Team lead and 3 employees hired</li>
+        <li><span class="pdot"></span>Private workspace created</li>
+        <li><span class="pdot"></span>Admin manager and 4 employees hired</li>
         <li><span class="pdot"></span>Bookkeeping rules and accounts loaded</li>
-        <li><span class="pdot"></span>Writing your brand guide</li>
-        <li><span class="pdot"></span>Safety checks</li>
+        <li><span class="pdot"></span>Admin manager sending your welcome and setup form</li>
       </ul>
-      <div class="learn"><b>While you wait</b>Your Finance manager will ask how you want to share sales and costs. You can answer from the control center.</div>
+      <div class="learn"><b>Next</b>Your Admin manager will introduce the team and send a 3-minute setup form. Once it is in, it trains the team, creates your storage and prepares your AI models. Each step can be undone.</div>
       <a class="btn btn-primary btn-block" id="open-app" href="/app.html" hidden>Open my control center</a>
     </div>
   </section>

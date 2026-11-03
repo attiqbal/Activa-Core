@@ -6,6 +6,7 @@ import {
   MockAdapter,
   ModelGateway,
   PermissionError,
+  EMPLOYEE_TEMPLATES,
   TEMPLATES,
   WorkforceService,
   packFor,
@@ -32,8 +33,15 @@ class Recorder implements ModelAdapter {
 }
 
 describe("templates", () => {
-  it("starts with the three agreed employees", () => {
-    expect(TEMPLATES.map((t) => t.key).sort()).toEqual(["business-consultant", "finance-manager", "marketing-manager"]);
+  it("has the four basic-package employees plus the free Admin manager", () => {
+    expect(EMPLOYEE_TEMPLATES.map((t) => t.key).sort()).toEqual(["business-consultant", "finance-manager", "hr-manager", "marketing-manager"]);
+    expect(TEMPLATES.filter((t) => t.kind === "manager").map((t) => t.key)).toEqual(["admin-manager"]);
+  });
+  it("every template lists plain-language capabilities and a first job", () => {
+    for (const t of TEMPLATES) {
+      expect(t.capabilities.length).toBeGreaterThanOrEqual(3);
+      expect(t.firstJob).toBeTruthy();
+    }
   });
 });
 
@@ -196,5 +204,46 @@ describe("business consultant", () => {
 
   it("the old Market analyst is gone", () => {
     expect(TEMPLATES.some((t) => t.key === "market-analyst")).toBe(false);
+  });
+});
+
+describe("HR manager", () => {
+  it("drafts only, protects staff data, avoids discrimination and legal advice", async () => {
+    const rec = new Recorder();
+    const { identity, workforce } = setup([rec]);
+    const ws = await identity.createWorkspace("owner", { name: "Acme" });
+    const e = await workforce.hire("owner", ws.id, "hr-manager");
+    expect(e.name).toBe("HR manager");
+    await workforce.assign("owner", ws.id, e.id, "Write a job ad for a barista");
+    const system = rec.last!.messages[0]!.content;
+    expect(system).toContain("HR manager");
+    expect(system).toContain("never hire, dismiss");
+    expect(system).toContain("confidential");
+    expect(system).toContain("protected characteristics");
+    expect(system).toContain("do not give legal advice");
+  });
+});
+
+describe("training", () => {
+  it("adds setup answers to the employee's instructions, and can be cleared", async () => {
+    const rec = new Recorder();
+    const { identity, workforce } = setup([rec]);
+    const ws = await identity.createWorkspace("owner", { name: "Acme" });
+    const e = await workforce.hire("owner", ws.id, "marketing-manager");
+    workforce.train("owner", ws.id, e.id, "- Customers: dog owners");
+    await workforce.assign("owner", ws.id, e.id, "post");
+    expect(rec.last!.messages[0]!.content).toContain("dog owners");
+    workforce.train("owner", ws.id, e.id, undefined);
+    await workforce.assign("owner", ws.id, e.id, "post");
+    expect(rec.last!.messages[0]!.content).not.toContain("dog owners");
+  });
+  it("only owners can train, and never across workspaces", async () => {
+    const { identity, workforce } = setup();
+    const a = await identity.createWorkspace("alice", { name: "A" });
+    const b = await identity.createWorkspace("bob", { name: "B" });
+    const e = await workforce.hire("alice", a.id, "hr-manager");
+    identity.addMember("alice", a.id, "mo", "member");
+    expect(() => workforce.train("mo", a.id, e.id, "x")).toThrow(PermissionError);
+    expect(() => workforce.train("bob", b.id, e.id, "x")).toThrow("employee not found");
   });
 });

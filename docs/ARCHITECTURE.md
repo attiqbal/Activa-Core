@@ -19,6 +19,14 @@ A modular monolith in TypeScript: one application, strict module boundaries.
 | Audit | `src/modules/audit` | append-only, in memory |
 | Identity | `src/modules/identity` | workspaces, roles, permissions, in memory |
 | Model Gateway | `src/modules/model-gateway` | tier routing and fallback; Anthropic, OpenAI-compatible (vLLM on RunPod, hosted open models) and mock adapters |
+| Admin manager | `src/modules/admin-manager` | welcomes the owner (dashboard or chat app), introduces the team, sends the setup form, then runs a journaled, rollbackable setup: profile, storage, models, training, checks |
+
+### Signup to working team
+
+1. `OnboardingService.signUp` creates the workspace, books, trial energy, the basic team (Finance, Marketing, Business consultant, HR) and the free Admin manager.
+2. `AdminManager.welcome` posts a welcome that lists every employee's capabilities, then the setup form link, to the dashboard inbox and to the owner's chosen chat app (held until connected).
+3. `AdminManager.submitForm` validates the answers and runs the setup steps through `StepRunner`. Every step records its output and has an undo; a failure rolls back finished steps newest first. `AdminManager.rollback` lets the owner undo a finished setup.
+4. Events `setup.completed`, `setup.failed` and `setup.rolled_back` are published for other modules.
 
 ## Next
 
