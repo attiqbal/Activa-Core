@@ -27,3 +27,12 @@ npm run build
 ```
 
 Pages: `/` landing, `/onboarding.html`, `/app.html` (control center demo with example data). Onboarding and the control center are front-end demos with simulated sign-in and data until the backend modules are wired in. Design tokens are in `web/src/styles.css`.
+
+## Run it locally
+
+```
+npm install && (cd web && npm install)
+npm run dev:api          # API on :8787 (mock AI unless ANTHROPIC_API_KEY is set; dev sign-up on)
+cd web && npm run dev    # website on :5173, proxies /api to the API
+```
+Sign-up in development has no email check. Real sign-in (email link) is still to build, and the server will not start in production with dev sign-up on. Data lives in memory and resets when the API restarts, until the Postgres wiring lands.
