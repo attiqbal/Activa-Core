@@ -9,12 +9,17 @@
     "test": "vitest run",
     "check": "npm run typecheck && npm test",
     "db:test": "bash db/isolation-test.sh",
-    "dev:api": "ALLOW_DEV_AUTH=1 tsx src/server/main.ts"
+    "dev:api": "ALLOW_DEV_AUTH=1 tsx src/server/main.ts",
+    "db:int": "bash db/with-postgres.sh npx vitest run test/postgres.int.test.ts"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",
+    "tsx": "^4.19.0",
     "typescript": "^5.6.0",
-    "vitest": "^2.1.0",
-    "tsx": "^4.19.0"
+    "vitest": "^2.1.0"
+  },
+  "dependencies": {
+    "@types/pg": "^8.23.1",
+    "pg": "^8.23.1"
   }
 }

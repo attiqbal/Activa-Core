@@ -66,7 +66,7 @@ export function createApp(p: Platform) {
       try { return req.rawBody ? JSON.parse(req.rawBody) : {}; } catch { throw new BadRequest("invalid JSON"); }
     };
 
-    if (method === "GET" && path === "/api/health") return json(200, { ok: true });
+    if (method === "GET" && path === "/api/health") return p.healthy() ? json(200, { ok: true }) : json(503, { ok: false, error: "storage is failing" });
 
     // ---- sign up (dev sign-in: no email verification yet) ----
     if (method === "POST" && path === "/api/signup") {
@@ -122,7 +122,7 @@ export function createApp(p: Platform) {
       const team = p.workforce.team(state.u, org.id);
       const lead = team.find((e) => e.templateKey === "business-consultant") ?? team[0]!;
       p.router.connect(state.u, { workspaceId: org.id, channel: "slack", externalWorkspace: o.team.id, defaultEmployeeId: lead.id }, []);
-      p.slackTokens.set(o.team.id, o.access_token);
+      p.saveSlackToken(org.id, o.team.id, o.access_token);
       if (o.authed_user?.id) p.router.linkUser(state.u, org.id, "slack", o.team.id, o.authed_user.id);
       return { status: 302, headers: { location: "/app.html#team" } };
     }

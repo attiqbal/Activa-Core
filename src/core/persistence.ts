@@ -1,0 +1,41 @@
+import type { AuditEvent } from "../modules/audit/index.js";
+import type { Workspace, Role } from "../modules/identity/index.js";
+import type { Employee, BusinessProfile } from "../modules/workforce/index.js";
+import type { Account, JournalEntry } from "../modules/ledger/index.js";
+import type { EnergyPlan, UsageRecord } from "../modules/energy/index.js";
+import type { Connection } from "../modules/channels/index.js";
+
+/**
+ * Where services report every change so it can be stored. Services stay fast and
+ * synchronous in memory; the sink writes behind them, in order. Methods must not throw.
+ */
+export interface Sink {
+  workspace(w: Workspace): void;
+  membership(workspaceId: string, userId: string, role: Role): void;
+  employee(e: Employee): void;
+  profile(workspaceId: string, p: BusinessProfile): void;
+  account(workspaceId: string, a: Account): void;
+  entry(e: JournalEntry): void;
+  usage(u: UsageRecord): void;
+  plan(workspaceId: string, p: EnergyPlan): void;
+  audit(e: AuditEvent): void;
+  connection(c: Connection): void;
+  link(workspaceId: string, key: string, userId: string): void;
+  slackToken(workspaceId: string, team: string, token: string): void;
+}
+
+/** Everything stored, in the order it must be restored. */
+export interface Snapshot {
+  workspaces: Workspace[];
+  memberships: { workspaceId: string; userId: string; role: Role }[];
+  employees: Employee[];
+  profiles: { workspaceId: string; profile: BusinessProfile }[];
+  accounts: { workspaceId: string; account: Account }[];
+  entries: JournalEntry[];
+  usage: UsageRecord[];
+  plans: { workspaceId: string; plan: EnergyPlan }[];
+  audit: AuditEvent[];
+  connections: Connection[];
+  links: { workspaceId: string; key: string; userId: string }[];
+  slackTokens: { team: string; token: string }[];
+}

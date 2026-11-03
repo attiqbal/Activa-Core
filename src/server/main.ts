@@ -18,6 +18,19 @@ const platform = createPlatform({
       ? { clientId: env.SLACK_CLIENT_ID, clientSecret: env.SLACK_CLIENT_SECRET, signingSecret: env.SLACK_SIGNING_SECRET, redirectUri: env.SLACK_REDIRECT_URI }
       : undefined,
 });
+if (env.DATABASE_URL) {
+  const { PgStore } = await import("../storage/postgres.js");
+  if (!env.DATABASE_APP_URL || !env.TOKEN_KEY) throw new Error("DATABASE_URL also needs DATABASE_APP_URL and TOKEN_KEY");
+  const store = new PgStore({ adminUrl: env.DATABASE_URL, appUrl: env.DATABASE_APP_URL, tokenKeyHex: env.TOKEN_KEY });
+  const applied = await store.migrate();
+  if (applied.length) console.log("applied migrations:", applied.join(", "));
+  await platform.attachStore(store);
+  console.log("storage: postgres");
+} else if (production) {
+  throw new Error("DATABASE_URL is required in production");
+} else {
+  console.log("storage: memory (data resets on restart)");
+}
 const handle = createApp(platform);
 
 createServer(async (incoming, out) => {
