@@ -12,6 +12,7 @@ export default defineConfig({
         main: resolve(__dirname, "index.html"),
         onboarding: resolve(__dirname, "onboarding.html"),
         app: resolve(__dirname, "app.html"),
+        signin: resolve(__dirname, "signin.html"),
       },
     },
   },

@@ -35,4 +35,6 @@ npm install && (cd web && npm install)
 npm run dev:api          # API on :8787 (mock AI unless ANTHROPIC_API_KEY is set; dev sign-up on)
 cd web && npm run dev    # website on :5173, proxies /api to the API
 ```
-Sign-up in development has no email check. Real sign-in (email link) is still to build, and the server will not start in production with dev sign-up on. Data lives in memory and resets when the API restarts, until the Postgres wiring lands.
+Sign-up in development has no email check. Real sign-in (email link) is still to build, and the server will not start in production with dev sign-up on. Without `DATABASE_URL` data lives in memory and resets on restart; with it (plus `DATABASE_APP_URL` and `TOKEN_KEY`, see `.env.example`) everything is stored in Postgres and the API applies `db/*.sql` on start.
+
+Tests: `npm run check` (fast, no database), `npm run db:test` (customer isolation) and `npm run db:int` (everything survives a restart). The last two start a throwaway local Postgres.
