@@ -1,18 +1,24 @@
 import "./styles.css";
-import { api, setToken } from "./api";
+import { api, clearSession, getToken, setToken } from "./api";
+import { initNav } from "./common";
 
-// The emailed link carries the one-time token in the part after "#", which is never sent to any server
-// except by this page, when it posts it to the API.
+initNav();
+const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
+const say = (h: string, p: string) => { $("si-h").textContent = h; $("si-p").textContent = p; };
+
+// The emailed link carries a one-time token after the "#", so it never reaches any server except when
+// this page posts it to the API. Removing it from the address bar keeps it out of history and screenshots.
 const token = new URLSearchParams(location.hash.slice(1)).get("token");
-history.replaceState(null, "", location.pathname);
-const $ = (id: string) => document.getElementById(id)!;
+if (token) history.replaceState(null, "", location.pathname);
 
-(async () => {
-  const r = token ? await api<{ token: string; email: string; hasOrganisation: boolean }>("/signin/verify", { body: { token } }) : undefined;
-  if (!r?.ok || !r.data) {
-    $("h").textContent = "This link didn't work";
-    $("p").textContent = (r?.data as { error?: string } | undefined)?.error ?? "It may have expired or been used already. Request a new one.";
-    $("back").removeAttribute("hidden");
+async function verify(t: string): Promise<void> {
+  $("si-form").hidden = true;
+  $("si-note").hidden = true;
+  say("Signing you in…", "");
+  const r = await api<{ token: string; email: string; hasOrganisation: boolean; error?: string }>("/signin/verify", { body: { token: t } });
+  if (!r.ok || !r.data?.token) {
+    say("This link didn't work", r.data?.error ?? "It may have expired or been used already. Request a new one below.");
+    $("si-form").hidden = false;
     return;
   }
   setToken(r.data.token);
@@ -21,4 +27,28 @@ const $ = (id: string) => document.getElementById(id)!;
     localStorage.setItem("vn.profile", JSON.stringify({ ...profile, email: r.data.email }));
   } catch { /* storage unavailable */ }
   location.replace(r.data.hasOrganisation ? "/app.html" : "/onboarding.html");
-})();
+}
+
+$<HTMLFormElement>("si-form").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const email = $<HTMLInputElement>("si-email").value.trim();
+  const err = $("si-err");
+  err.hidden = true;
+  $("si-go").setAttribute("disabled", "");
+  const r = await api("/signin/start", { body: { email } });
+  $("si-go").removeAttribute("disabled");
+  if (r.status === 429) { err.textContent = "Too many emails for this address. Please try again in an hour."; err.hidden = false; return; }
+  if (!r.ok) { err.textContent = r.status === 0 ? "We can't reach the service right now. Please try again." : "Enter a valid email address."; err.hidden = false; return; }
+  $("si-form").hidden = true;
+  say("Check your email", `If ${email} has an account, or you are new, a sign-in link is on its way. It works once and expires in 15 minutes.`);
+});
+
+$("si-out").addEventListener("click", () => { clearSession(); location.reload(); });
+
+if (token) void verify(token);
+else if (getToken()) {
+  $("si-form").hidden = true;
+  $("si-note").hidden = true;
+  $("si-signed").hidden = false;
+  say("You're logged in", "Open your control center, or log out of this device.");
+}

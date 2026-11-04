@@ -22,6 +22,7 @@
 <a class="ni" href="#team" data-nav="team"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="8" r="3.2"/><path d="M3 20c0-3.3 2.7-5.5 6-5.5s6 2.200 6 5.5"/><path d="M16 5.5a3 3 0 010 5.5M18 14.7c1.800.7 3 2.400 3 5.3"/></svg>Team</a>
 <a class="ni" href="#finance" data-nav="finance"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 19V9M10 19V5M16 19v-7M22 19H2"/></svg>Finance desk</a>
 <a class="ni" href="#usage" data-nav="usage"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M13 2L4 14h7l-1 8 9-12h-7z"/></svg>Usage and wallet</a>
+<a class="ni" href="#settings" data-nav="settings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M18.4 5.6l-2.1 2.100M7.7 16.3l-2.1 2.1"/></svg>Settings</a>
     <div class="sep"></div>
     <div class="group">Connections</div>
     <a class="ni" href="#team" data-slack><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9.5" y="2" width="3" height="8" rx="1.5"/><rect x="14" y="9.5" width="8" height="3" rx="1.5"/><rect x="11.5" y="14" width="3" height="8" rx="1.5"/><rect x="2" y="11.5" width="8" height="3" rx="1.5"/></svg>Slack <span class="count" id="slack-state">Connect</span></a>
@@ -33,8 +34,10 @@
     <div class="topbar">
       <button class="menu-btn" id="menu-btn" aria-label="Open menu"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button>
       <form class="ask" id="ask"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="M20 20l-4-4"/></svg><input id="ask-in" placeholder="Ask your team anything…" aria-label="Ask your team"><span class="kbd hide-sm">/</span></form>
-      <div class="right"><a class="status warn hide-sm" href="#approvals"><span class="dot"></span><span id="need-count">3 need you</span></a><span class="badge badge-dark mono hide-sm">Wallet £0.00</span><span class="av av-sm av-me" id="me-av">AI</span></div>
+      <div class="right"><a class="status warn hide-sm" href="#approvals"><span class="dot"></span><span id="need-count">3 need you</span></a><span class="badge badge-dark mono hide-sm">Wallet £0.00</span><button class="av av-sm av-me" id="me-av" aria-label="Account and settings" title="Account and settings" style="border:0;cursor:pointer">AI</button></div>
     </div>
+
+    <div id="demo-banner" class="panel" hidden style="margin:12px 24px 0;padding:10px 14px;font-size:13px" role="status"><b>Demo mode.</b> The server is not reachable, so you are looking at an example business. <a href="/signin.html">Log in</a> once it is running.</div>
 
     <!-- HOME -->
     <div class="content" data-screen="home">
@@ -189,6 +192,16 @@
           <section class="panel"><div class="panel-h"><h2>For review</h2></div><div class="ubar" style="grid-template-columns:1fr auto"><span>Unusual £299 software charge</span><button class="btn btn-sm btn-ghost" data-toast="Opened in review: demo only">Check</button></div><div class="ubar" style="grid-template-columns:1fr auto"><span>Receipt without a match</span><button class="btn btn-sm btn-ghost" data-toast="Opened in review: demo only">Check</button></div></section>
         </div>
       </div>
+    </div>
+
+    <!-- SETTINGS -->
+    <div class="content" data-screen="settings" hidden>
+      <div class="page-h"><div><h1>Settings</h1><p>Your account and company details.</p></div></div>
+      <section class="panel"><div class="panel-h"><h2>Account</h2></div>
+        <div class="ubar" style="grid-template-columns:1fr auto"><span>Company</span><span id="set-biz" class="mono"></span></div>
+        <div class="ubar" style="grid-template-columns:1fr auto"><span>Email</span><span id="set-email" class="mono"></span></div>
+        <div class="ubar" style="grid-template-columns:1fr auto"><span>Sign out of this device</span><button class="btn btn-sm btn-ghost" data-signout>Sign out</button></div></section>
+      <section class="panel"><div class="panel-h"><h2>Coming next</h2></div><p class="muted">Billing, spending cap, privacy tier and team members will live here.</p></section>
     </div>
 
     <!-- USAGE -->
