@@ -1,5 +1,16 @@
 // Shared bits: sticky nav behaviour, mobile menu, toast.
+import { getToken } from "./api";
+
 export function initNav(): void {
+  // Mark the page we are on, and turn "Log in" into "Open control center" for a signed-in visitor.
+  const here = location.pathname.replace(/\/index\.html$/, "/");
+  document.querySelectorAll<HTMLAnchorElement>(".nav-links a, .mobile-menu a").forEach((a) => {
+    const target = new URL(a.href, location.origin);
+    if (!target.hash && target.pathname === here) a.setAttribute("aria-current", "page");
+  });
+  if (getToken()) {
+    document.querySelectorAll<HTMLAnchorElement>("[data-account-link]").forEach((a) => { a.href = "/app.html"; a.textContent = "Open control center"; });
+  }
   const nav = document.querySelector<HTMLElement>(".nav");
   if (nav) {
     const onScroll = () => nav.classList.toggle("scrolled", window.scrollY > 8);

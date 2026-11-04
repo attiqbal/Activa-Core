@@ -1,7 +1,7 @@
 import "./styles.css";
 import { toast } from "./common";
 import { initSetup } from "./setup";
-import { api, getToken, type Org } from "./api";
+import { api, getToken, clearSession, type Org } from "./api";
 
 const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
 const app = $("app");
@@ -95,9 +95,11 @@ let realOrg: Org | undefined;
 const ROLE: Record<string, [string, string]> = { "finance-manager": ["FM", "av-fm"], "marketing-manager": ["MM", "av-mm"], "business-consultant": ["BC", "av-bc"], "hr-manager": ["HR", "av-hr"], "admin-manager": ["AM", "av-tl"] };
 const esc = (s: string) => s.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]!);
 async function loadOrg(): Promise<void> {
-  if (!getToken()) return;
   const r = await api<Org>("/org");
-  if (!r.ok || !r.data) return;
+  // Guard: the API is running but this device has no valid login -> log-in page.
+  if (r.status === 401) { clearSession(); location.replace("/signin.html"); return; }
+  // API unreachable (or not set up yet) -> keep the page usable as a demo, and say so.
+  if (!r.ok || !r.data) { $("demo-banner").hidden = false; return; }
   realOrg = r.data;
   $("org-name").textContent = realOrg.name;
   $("org-av").textContent = initials(realOrg.name);
@@ -112,6 +114,13 @@ async function loadOrg(): Promise<void> {
   if (realOrg.trialEndsAt) toast(`Free trial until ${new Date(realOrg.trialEndsAt).toLocaleDateString()}`);
 }
 void loadOrg();
+
+// Account menu: sign out, and the Settings screen's account details.
+function signOut(): void { clearSession(); location.href = "/signin.html"; }
+document.querySelectorAll("[data-signout]").forEach((b) => b.addEventListener("click", signOut));
+$("me-av").addEventListener("click", () => { location.hash = "#settings"; });
+$("set-biz").textContent = biz;
+$("set-email").textContent = profile.email || "Not set";
 
 // Ask bar: "finance: ..." / "marketing: ..." / "consultant: ..." / "hr: ..." picks the employee; otherwise the consultant answers.
 $<HTMLFormElement>("ask").addEventListener("submit", async (e) => {
